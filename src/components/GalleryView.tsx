@@ -1,5 +1,5 @@
 // src/components/GalleryView.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
@@ -18,6 +18,7 @@ import { FavouritesDialog } from './FavouritesDialog';
 import { BinDialog } from './BinDialog';
 import { ExportDialog } from './ExportDialog';
 import { ShareDialog } from './ShareDialog';
+import { useGalleryStore } from '../store/gallery';
 
 interface GalleryViewProps {
   children?: React.ReactNode;
@@ -37,6 +38,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
 
   // Current theme state (for themes dialog)
   const [currentTheme, setCurrentTheme] = useState('default');
+
+  const { layout, photos } = useGalleryStore();
+
+  const polaroidRotationClasses = useMemo(() => ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2', 'rotate-0'], []);
 
   const menuItems = [
     {
@@ -166,11 +171,80 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       <div className="relative z-10 px-6 py-12">
         {children ? children : (
           <>
-            {/* Gallery Grid */}
             <div className="max-w-7xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {/* <div className='aspect-square bg-black-900 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 flex items-center justify-center group cursor-pointer border border-black-800 hover:border-black-600 hover:bg-black-800'></div> */}
-              </div>
+              {layout === 'grid' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="aspect-square overflow-hidden rounded-3xl border border-black-800 bg-black-900">
+                      <img
+                        src={photo.src}
+                        alt={photo.caption || 'Photo'}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {layout === 'masonry' && (
+                <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 [column-fill:_balance]">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="mb-6 break-inside-avoid overflow-hidden rounded-3xl border border-black-800 bg-black-900">
+                      <img
+                        src={photo.src}
+                        alt={photo.caption || 'Photo'}
+                        className="w-full h-auto object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {layout === 'polaroid' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  {photos.map((photo, index) => (
+                    <div key={photo.id} className="relative">
+                      <div className={`bg-white text-black rounded-[1rem] p-3 shadow-2xl ${polaroidRotationClasses[index % polaroidRotationClasses.length]} transition-transform hover:rotate-0`}> 
+                        <div className="overflow-hidden rounded-lg">
+                          <img
+                            src={photo.src}
+                            alt={photo.caption || 'Photo'}
+                            className="w-full h-auto object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="pt-3 text-center text-sm font-medium min-h-6">
+                          {photo.caption || 'Polaroid'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {layout === 'timeline' && (
+                <div className="relative max-w-3xl mx-auto">
+                  <div className="absolute left-4 top-0 bottom-0 w-px bg-black-700" />
+                  <div className="space-y-10">
+                    {photos.map((photo, index) => (
+                      <div key={photo.id} className="relative pl-10">
+                        <div className="absolute left-2 top-2 w-3 h-3 rounded-full bg-white border border-black-700" />
+                        <div className="overflow-hidden rounded-2xl border border-black-800 bg-black-900">
+                          <img
+                            src={photo.src}
+                            alt={photo.caption || 'Photo'}
+                            className="w-full h-auto object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="mt-2 text-sm text-black-300">{photo.caption || `Moment ${index + 1}`}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}

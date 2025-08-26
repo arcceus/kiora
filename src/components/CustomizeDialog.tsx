@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Settings, Type, Sticker, Palette, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Settings, Type, Sticker, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +7,8 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Button } from './ui/button';
+import { useGalleryStore } from '../store/gallery';
+import type { GalleryLayout } from '../store/gallery';
 
 interface CustomizeDialogProps {
   open: boolean;
@@ -17,13 +18,20 @@ interface CustomizeDialogProps {
 type CustomizationTab = 'layout' | 'decorations' | 'text' | 'effects';
 
 export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenChange }) => {
+  const { layout: currentLayout, setLayout } = useGalleryStore();
   const [activeTab, setActiveTab] = useState<CustomizationTab>('layout');
-  const [customizations, setCustomizations] = useState({
-    layout: 'grid',
-    decorations: [] as string[],
+  const [customizations, setCustomizations] = useState<{ layout: GalleryLayout; decorations: string[]; text: string; effects: string[] }>({
+    layout: currentLayout,
+    decorations: [],
     text: '',
-    effects: [] as string[]
+    effects: []
   });
+
+  useEffect(() => {
+    if (open) {
+      setCustomizations(prev => ({ ...prev, layout: currentLayout }));
+    }
+  }, [open, currentLayout]);
 
   const tabs = [
     { id: 'layout' as const, label: 'Layout', icon: Settings },
@@ -32,7 +40,7 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
     { id: 'effects' as const, label: 'Effects', icon: Sparkles }
   ];
 
-  const layoutOptions = [
+  const layoutOptions: { id: GalleryLayout; name: string; preview: string }[] = [
     { id: 'grid', name: 'Grid', preview: '▦▦▦' },
     { id: 'masonry', name: 'Masonry', preview: '▥▥▥' },
     { id: 'polaroid', name: 'Polaroid', preview: '📷📷📷' },
@@ -57,7 +65,7 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
   ];
 
   const handleApplyCustomizations = () => {
-    console.log('Applying customizations:', customizations);
+    setLayout(customizations.layout);
     onOpenChange(false);
   };
 
