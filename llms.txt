@@ -1,0 +1,45 @@
+Project Overview
+
+Building a customizable scrapbook gallery app for an Arweave hackathon that combines permanent photo storage with creative layout customization (like Instagram meets traditional scrapbooking).
+Core Vision
+
+    Full-screen immersive gallery with infinite scroll
+
+    Customizable scrapbook layouts with decorative elements (flowers, stickers, text)
+
+    Permanent storage on Arweave - photos automatically uploaded to blockchain
+
+    Template-based approach for quick styling + custom layout builder for advanced users
+
+UI/UX Design Decisions
+
+    Full-screen canvas for gallery display
+
+    Floating menu button (top-left corner) with dropdown menu (NOT sidebar)
+
+    Dropdown contains: Themes (horizontal scroll), Gallery Direction toggle, basic navigation
+
+    Themes section: Pre-made themes + User's custom themes + Create new button
+
+    Simplified menu options: Upload, Themes, Customize, Album, Favourites, Bin, Export, Share
+
+Key Features Needed
+
+    Photo upload with Arweave integration
+
+    Theme application - transform gallery layout based on selected theme
+
+    Infinite scroll with repeating layout patterns
+
+    Customization page (separate route for advanced editing)
+
+    Gallery management (Album, Favourites, Bin functionality)
+
+Important Notes
+
+    Hackathon timeline - need working demo ASAP, focus on core features first
+
+    Layout patterns - themes should define repeating units that scale infinitely
+
+    Arweave integration - photos auto-upload to permanent storage
+
