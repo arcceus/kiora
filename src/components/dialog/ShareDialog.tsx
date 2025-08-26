@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Share, Copy, Link, QrCode, Twitter, Facebook, Instagram, MessageSquare, Check } from 'lucide-react';
+import { Share, Copy, Link, QrCode, Twitter, Facebook, Instagram, MessageSquare, Check, Download } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +18,6 @@ type ShareMethod = 'link' | 'qr' | 'social' | 'embed';
 export const ShareDialog: React.FC<ShareDialogProps> = ({ open, onOpenChange }) => {
   const [activeMethod, setActiveMethod] = useState<ShareMethod>('link');
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
 
   // Mock share URL - in real app this would be generated dynamically
   const shareUrl = 'https://permagallery.app/gallery/shared/abc123def456';

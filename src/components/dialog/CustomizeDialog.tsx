@@ -8,7 +8,7 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { useGalleryStore } from '../../store/gallery';
-import type { GalleryLayout, ScrollDirection, GalleryBackground } from '../../store/gallery';
+import type { GalleryLayout, ScrollDirection, GalleryBackground, SavedLayout } from '../../store/gallery';
 
 interface CustomizeDialogProps {
   open: boolean;
@@ -18,7 +18,7 @@ interface CustomizeDialogProps {
 type CustomizationTab = 'layout' | 'scroll' | 'background';
 
 export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenChange }) => {
-  const { layout: currentLayout, scrollDirection: currentScroll, background: currentBg, setLayout, setScrollDirection, setBackground } = useGalleryStore();
+  const { layout: currentLayout, scrollDirection: currentScroll, background: currentBg, savedLayouts, frameStyle, setLayout, setScrollDirection, setBackground, setLayoutSchema, setFrameStyle } = useGalleryStore();
   const [activeTab, setActiveTab] = useState<CustomizationTab>('layout');
   const [customizations, setCustomizations] = useState<{ layout: GalleryLayout; scroll: ScrollDirection; background: GalleryBackground }>({
     layout: currentLayout,
@@ -83,12 +83,55 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                     }
                   `}
-                  onClick={() => setCustomizations(prev => ({ ...prev, layout: option.id }))}
+                  onClick={() => {
+                    setLayout(option.id);
+                    setLayoutSchema(null);
+                    setCustomizations(prev => ({ ...prev, layout: option.id }));
+                  }}
                 >
                   <div className="text-2xl text-center mb-2">{option.preview}</div>
                   <p className="text-sm text-center font-medium">{option.name}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="pt-4">
+              <h4 className="text-sm font-medium mb-2">Saved Custom Layouts</h4>
+              {savedLayouts.length === 0 && (
+                <p className="text-sm text-gray-500">No saved layouts yet.</p>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                {savedLayouts.map((l: SavedLayout) => (
+                  <button
+                    key={l.id}
+                    className="p-2 border-2 rounded-lg text-left hover:border-blue-500"
+                    onClick={() => {
+                      setLayoutSchema(l.schema);
+                    }}
+                  >
+                    <div className="text-sm font-medium truncate">{l.name}</div>
+                    <div className="text-xs text-gray-500">{l.schema.nodes.length} frames</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <h4 className="text-sm font-medium mb-2">Photo Frame</h4>
+              <div className="flex gap-2">
+                <button
+                  className={`px-3 py-1 rounded-md border ${frameStyle === 'square' ? 'border-blue-500' : 'border-gray-300'}`}
+                  onClick={() => setFrameStyle('square')}
+                >
+                  Normal
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-md border ${frameStyle === 'rounded' ? 'border-blue-500' : 'border-gray-300'}`}
+                  onClick={() => setFrameStyle('rounded')}
+                >
+                  Rounded
+                </button>
+              </div>
             </div>
           </div>
         );

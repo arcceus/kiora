@@ -1,6 +1,7 @@
 // src/components/GalleryView.tsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   Palette,
@@ -19,8 +20,9 @@ import { BinDialog } from './dialog/BinDialog';
 import { ExportDialog } from './dialog/ExportDialog';
 import { ShareDialog } from './dialog/ShareDialog';
 import { useGalleryStore } from '../store/gallery';
-import SchemaRenderer from './SchemaRenderer';
+import { SimpleLayoutRenderer } from './SimpleLayoutRenderer';
 import { GridLayout } from './layouts/GridLayout';
+import type { LayoutSchema, PhotoRect } from './SimpleLayoutEditor';
 import { MasonryLayout } from './layouts/MasonryLayout';
 import { PolaroidLayout } from './layouts/PolaroidLayout';
 import { TimelineLayout } from './layouts/TimelineLayout';
@@ -30,6 +32,7 @@ interface GalleryViewProps {
 }
 
 export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Dialog states
@@ -44,8 +47,34 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   // Current theme state (for themes dialog)
   const [currentTheme, setCurrentTheme] = useState('default');
 
-  const { layout, photos, background, scrollDirection } = useGalleryStore();
+  const { layout, photos, background, scrollDirection, layoutSchema } = useGalleryStore();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Adapter functions to convert existing data structures to SimpleLayoutRenderer format
+  const convertToLayoutSchema = (tileSchema: any): LayoutSchema => {
+    return {
+      canvas: { width: tileSchema.tileSize.width, height: tileSchema.tileSize.height },
+      rects: tileSchema.nodes.map((node: any) => ({
+        id: node.id,
+        x: node.frame.x,
+        y: node.frame.y,
+        width: node.frame.width,
+        height: node.frame.height,
+      }))
+    };
+  };
+
+  const convertToPhotoRects = (photoItems: any[]): PhotoRect[] => {
+    return photoItems.map((photo) => ({
+      id: photo.id,
+      x: 0,
+      y: 0,
+      width: photo.width,
+      height: photo.height,
+      src: photo.src,
+      caption: photo.caption,
+    }));
+  };
 
 
   const menuItems = [
@@ -53,7 +82,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       icon: Settings,
       label: 'Builder',
       onClick: () => {
-        window.location.href = '/builder';
+        navigate('/builder');
       }
     },
     {
@@ -193,12 +222,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
         {children ? children : (
           <>
             <div className="max-w-7xl mx-auto">
-              {useGalleryStore.getState().layoutSchema ? (
-                <SchemaRenderer
-                  schema={useGalleryStore.getState().layoutSchema!}
-                  photos={photos}
-                  gap={24}
-                  axis={scrollDirection}
+              {layoutSchema ? (
+                <SimpleLayoutRenderer
+                  schema={convertToLayoutSchema(layoutSchema)}
+                  photos={convertToPhotoRects(photos)}
+                  onOpenLightbox={setLightboxIndex}
                 />
               ) : (
                 <>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Download, Image, FileImage, Settings, Check } from 'lucide-react';
+import { Download, Image, FileImage, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

@@ -25,17 +25,28 @@ export interface LayoutTileSchema {
   version: 1;
 }
 
+export interface SavedLayout {
+  id: string;
+  name: string;
+  schema: LayoutTileSchema;
+}
+
 interface GalleryState {
   layout: GalleryLayout;
   photos: PhotoItem[];
   scrollDirection: ScrollDirection;
   background: GalleryBackground;
   layoutSchema: LayoutTileSchema | null;
+  savedLayouts: SavedLayout[];
+  frameStyle: 'square' | 'rounded';
   setLayout: (layout: GalleryLayout) => void;
   setPhotos: (photos: PhotoItem[]) => void;
   setScrollDirection: (dir: ScrollDirection) => void;
   setBackground: (bg: GalleryBackground) => void;
   setLayoutSchema: (schema: LayoutTileSchema | null) => void;
+  addSavedLayout: (name: string, schema: LayoutTileSchema) => void;
+  removeSavedLayout: (id: string) => void;
+  setFrameStyle: (style: 'square' | 'rounded') => void;
 }
 
 const placeholderPhotos: PhotoItem[] = [
@@ -59,11 +70,16 @@ export const useGalleryStore = create<GalleryState>((set) => ({
   scrollDirection: 'vertical',
   background: 'black',
   layoutSchema: null,
+  savedLayouts: [],
+  frameStyle: 'rounded',
   setLayout: (layout) => set({ layout }),
   setPhotos: (photos) => set({ photos })
   ,setScrollDirection: (dir) => set({ scrollDirection: dir })
   ,setBackground: (bg) => set({ background: bg })
   ,setLayoutSchema: (schema) => set({ layoutSchema: schema })
+  ,addSavedLayout: (name, schema) => set((s) => ({ savedLayouts: [...s.savedLayouts, { id: `${Date.now()}`, name, schema }] }))
+  ,removeSavedLayout: (id) => set((s) => ({ savedLayouts: s.savedLayouts.filter(l => l.id !== id) }))
+  ,setFrameStyle: (style) => set({ frameStyle: style })
 }));
 
 

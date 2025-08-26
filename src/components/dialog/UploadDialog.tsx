@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Upload, X, ImageIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { PhotoItem } from '../../store/gallery';
+import { useGalleryStore } from '../../store/gallery';
 
 interface GridLayoutProps {
   photos: PhotoItem[];
@@ -7,12 +8,14 @@ interface GridLayoutProps {
 }
 
 export const GridLayout: React.FC<GridLayoutProps> = ({ photos, onOpenLightbox }) => {
+  const { frameStyle } = useGalleryStore();
+  const frameClass = frameStyle === 'rounded' ? 'rounded-3xl' : 'rounded-none';
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {photos.map((photo, index) => (
         <button
           key={photo.id}
-          className="aspect-square overflow-hidden rounded-3xl border border-black-800 bg-black-900 focus:outline-none"
+          className={`aspect-square overflow-hidden ${frameClass} border border-black-800 bg-black-900 focus:outline-none`}
           onClick={() => onOpenLightbox(index)}
         >
           <img
