@@ -1,5 +1,5 @@
 // src/components/GalleryView.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
@@ -11,14 +11,19 @@ import {
   Download,
   Share
 } from 'lucide-react';
-import { UploadDialog } from './UploadDialog';
-import { ThemesDialog } from './ThemesDialog';
-import { CustomizeDialog } from './CustomizeDialog';
-import { FavouritesDialog } from './FavouritesDialog';
-import { BinDialog } from './BinDialog';
-import { ExportDialog } from './ExportDialog';
-import { ShareDialog } from './ShareDialog';
+import { UploadDialog } from './dialog/UploadDialog';
+import { ThemesDialog } from './dialog/ThemesDialog';
+import { CustomizeDialog } from './dialog/CustomizeDialog';
+import { FavouritesDialog } from './dialog/FavouritesDialog';
+import { BinDialog } from './dialog/BinDialog';
+import { ExportDialog } from './dialog/ExportDialog';
+import { ShareDialog } from './dialog/ShareDialog';
 import { useGalleryStore } from '../store/gallery';
+import SchemaRenderer from './SchemaRenderer';
+import { GridLayout } from './layouts/GridLayout';
+import { MasonryLayout } from './layouts/MasonryLayout';
+import { PolaroidLayout } from './layouts/PolaroidLayout';
+import { TimelineLayout } from './layouts/TimelineLayout';
 
 interface GalleryViewProps {
   children?: React.ReactNode;
@@ -39,11 +44,18 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   // Current theme state (for themes dialog)
   const [currentTheme, setCurrentTheme] = useState('default');
 
-  const { layout, photos } = useGalleryStore();
+  const { layout, photos, background, scrollDirection } = useGalleryStore();
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const polaroidRotationClasses = useMemo(() => ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2', 'rotate-0'], []);
 
   const menuItems = [
+    {
+      icon: Settings,
+      label: 'Builder',
+      onClick: () => {
+        window.location.href = '/builder';
+      }
+    },
     {
       icon: Upload,
       label: 'Upload',
@@ -96,8 +108,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
     console.log('Theme changed to:', themeId);
   };
 
+  const backgroundClass = background === 'black' ? 'bg-black' 
+    : background === 'dark' ? 'bg-zinc-950' 
+    : background === 'light' ? 'bg-zinc-100' 
+    : background === 'white' ? 'bg-white' 
+    : background === 'paper' ? 'bg-[radial-gradient(circle_at_1px_1px,_#111_1px,_transparent_0)] [background-size:20px_20px]' 
+    : 'bg-gradient-to-b from-black to-zinc-900';
+
+  const scrollClass = scrollDirection === 'horizontal' ? 'overflow-x-auto whitespace-nowrap [scrollbar-width:none] snap-x snap-mandatory' : '';
+
   return (
-    <div className="min-h-screen bg-black font-sans">
+    <div className={`min-h-screen ${backgroundClass} font-sans`}>
       
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
@@ -168,82 +189,24 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       </div>
 
       {/* Gallery Content */}
-      <div className="relative z-10 px-6 py-12">
+      <div className={`relative z-10 px-6 py-12 ${scrollClass}`}>
         {children ? children : (
           <>
             <div className="max-w-7xl mx-auto">
-              {layout === 'grid' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {photos.map((photo) => (
-                    <div key={photo.id} className="aspect-square overflow-hidden rounded-3xl border border-black-800 bg-black-900">
-                      <img
-                        src={photo.src}
-                        alt={photo.caption || 'Photo'}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {layout === 'masonry' && (
-                <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 [column-fill:_balance]">
-                  {photos.map((photo) => (
-                    <div key={photo.id} className="mb-6 break-inside-avoid overflow-hidden rounded-3xl border border-black-800 bg-black-900">
-                      <img
-                        src={photo.src}
-                        alt={photo.caption || 'Photo'}
-                        className="w-full h-auto object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {layout === 'polaroid' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                  {photos.map((photo, index) => (
-                    <div key={photo.id} className="relative">
-                      <div className={`bg-white text-black rounded-[1rem] p-3 shadow-2xl ${polaroidRotationClasses[index % polaroidRotationClasses.length]} transition-transform hover:rotate-0`}> 
-                        <div className="overflow-hidden rounded-lg">
-                          <img
-                            src={photo.src}
-                            alt={photo.caption || 'Photo'}
-                            className="w-full h-auto object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="pt-3 text-center text-sm font-medium min-h-6">
-                          {photo.caption || 'Polaroid'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {layout === 'timeline' && (
-                <div className="relative max-w-3xl mx-auto">
-                  <div className="absolute left-4 top-0 bottom-0 w-px bg-black-700" />
-                  <div className="space-y-10">
-                    {photos.map((photo, index) => (
-                      <div key={photo.id} className="relative pl-10">
-                        <div className="absolute left-2 top-2 w-3 h-3 rounded-full bg-white border border-black-700" />
-                        <div className="overflow-hidden rounded-2xl border border-black-800 bg-black-900">
-                          <img
-                            src={photo.src}
-                            alt={photo.caption || 'Photo'}
-                            className="w-full h-auto object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="mt-2 text-sm text-black-300">{photo.caption || `Moment ${index + 1}`}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {useGalleryStore.getState().layoutSchema ? (
+                <SchemaRenderer
+                  schema={useGalleryStore.getState().layoutSchema!}
+                  photos={photos}
+                  gap={24}
+                  axis={scrollDirection}
+                />
+              ) : (
+                <>
+                  {layout === 'grid' && (<GridLayout photos={photos} onOpenLightbox={setLightboxIndex} />)}
+                  {layout === 'masonry' && (<MasonryLayout photos={photos} onOpenLightbox={setLightboxIndex} />)}
+                  {layout === 'polaroid' && (<PolaroidLayout photos={photos} onOpenLightbox={setLightboxIndex} />)}
+                  {layout === 'timeline' && (<TimelineLayout photos={photos} onOpenLightbox={setLightboxIndex} />)}
+                </>
               )}
             </div>
           </>
@@ -265,6 +228,23 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       </AnimatePresence>
 
       {/* Dialog Components */}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+            onClick={() => setLightboxIndex(null)}
+          >
+            <img
+              src={photos[lightboxIndex].src}
+              alt={photos[lightboxIndex].caption || 'Photo'}
+              className="max-w-[90vw] max-h-[90vh] object-contain"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <UploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}

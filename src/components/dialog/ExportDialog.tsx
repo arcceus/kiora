@@ -6,8 +6,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { Button } from './ui/button';
+} from '../ui/dialog';
+import { Button } from '../ui/button';
 
 interface ExportDialogProps {
   open: boolean;

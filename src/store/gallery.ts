@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
 export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'timeline';
+export type ScrollDirection = 'vertical' | 'horizontal';
+export type GalleryBackground = 'black' | 'dark' | 'light' | 'white' | 'paper' | 'gradient';
 
 export interface PhotoItem {
   id: string;
@@ -10,11 +12,30 @@ export interface PhotoItem {
   caption?: string;
 }
 
+export interface LayoutNodeSchema {
+  id: string;
+  frame: { x: number; y: number; width: number; height: number };
+  zIndex?: number;
+}
+
+export interface LayoutTileSchema {
+  id: string;
+  tileSize: { width: number; height: number };
+  nodes: LayoutNodeSchema[];
+  version: 1;
+}
+
 interface GalleryState {
   layout: GalleryLayout;
   photos: PhotoItem[];
+  scrollDirection: ScrollDirection;
+  background: GalleryBackground;
+  layoutSchema: LayoutTileSchema | null;
   setLayout: (layout: GalleryLayout) => void;
   setPhotos: (photos: PhotoItem[]) => void;
+  setScrollDirection: (dir: ScrollDirection) => void;
+  setBackground: (bg: GalleryBackground) => void;
+  setLayoutSchema: (schema: LayoutTileSchema | null) => void;
 }
 
 const placeholderPhotos: PhotoItem[] = [
@@ -35,8 +56,14 @@ const placeholderPhotos: PhotoItem[] = [
 export const useGalleryStore = create<GalleryState>((set) => ({
   layout: 'grid',
   photos: placeholderPhotos,
+  scrollDirection: 'vertical',
+  background: 'black',
+  layoutSchema: null,
   setLayout: (layout) => set({ layout }),
   setPhotos: (photos) => set({ photos })
+  ,setScrollDirection: (dir) => set({ scrollDirection: dir })
+  ,setBackground: (bg) => set({ background: bg })
+  ,setLayoutSchema: (schema) => set({ layoutSchema: schema })
 }));
 
 
