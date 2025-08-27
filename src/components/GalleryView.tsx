@@ -26,7 +26,8 @@ import type { LayoutSchema, PhotoRect } from './SimpleLayoutEditor';
 import { MasonryLayout } from './layouts/MasonryLayout';
 import { PolaroidLayout } from './layouts/PolaroidLayout';
 import { TimelineLayout } from './layouts/TimelineLayout';
-
+import { ConnectButton } from "@arweave-wallet-kit/react";
+import { initializeTurboWithWalletKit } from '../lib/turbo';
 interface GalleryViewProps {
   children?: React.ReactNode;
 }
@@ -148,7 +149,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
 
   return (
     <div className={`min-h-screen ${backgroundClass} font-sans`}>
-      
+      <ConnectButton />
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
         <motion.button
