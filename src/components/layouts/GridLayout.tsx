@@ -8,8 +8,8 @@ interface GridLayoutProps {
 }
 
 export const GridLayout: React.FC<GridLayoutProps> = ({ photos, onOpenLightbox }) => {
-  const { frameStyle } = useGalleryStore();
-  const frameClass = frameStyle === 'rounded' ? 'rounded-3xl' : 'rounded-none';
+  const { customFrameStyle } = useGalleryStore();
+  const frameClass = customFrameStyle.includes('rounded') ? 'rounded-3xl' : 'rounded-none';
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {photos.map((photo, index) => (

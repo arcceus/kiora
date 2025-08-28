@@ -9,7 +9,7 @@ interface PolaroidLayoutProps {
 
 export const PolaroidLayout: React.FC<PolaroidLayoutProps> = ({ photos, onOpenLightbox }) => {
   const rotations = useMemo(() => ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2', 'rotate-0'], []);
-  const { frameStyle } = useGalleryStore();
+  const { customFrameStyle } = useGalleryStore();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
       {photos.map((photo, index) => (
@@ -18,7 +18,7 @@ export const PolaroidLayout: React.FC<PolaroidLayoutProps> = ({ photos, onOpenLi
             className={`bg-white text-black rounded-[1rem] p-3 shadow-2xl ${rotations[index % rotations.length]} transition-transform hover:rotate-0 focus:outline-none`}
             onClick={() => onOpenLightbox(index)}
           >
-            <div className={`overflow-hidden ${frameStyle === 'rounded' ? 'rounded-lg' : 'rounded-none'}`}>
+            <div className={`overflow-hidden ${customFrameStyle.includes('rounded') ? 'rounded-lg' : 'rounded-none'}`}>
               <img
                 src={photo.src}
                 alt={photo.caption || 'Photo'}

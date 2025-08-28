@@ -26,8 +26,7 @@ import type { LayoutSchema, PhotoRect } from './SimpleLayoutEditor';
 import { MasonryLayout } from './layouts/MasonryLayout';
 import { PolaroidLayout } from './layouts/PolaroidLayout';
 import { TimelineLayout } from './layouts/TimelineLayout';
-import { ConnectButton } from "@arweave-wallet-kit/react";
-import { initializeTurboWithWalletKit } from '../lib/turbo';
+import { ConnectButton, useApi } from "@arweave-wallet-kit/react";
 interface GalleryViewProps {
   children?: React.ReactNode;
 }
@@ -35,6 +34,8 @@ interface GalleryViewProps {
 export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const api = useApi();
+  console.log("gayman", api);
 
   // Dialog states
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -48,7 +49,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   // Current theme state (for themes dialog)
   const [currentTheme, setCurrentTheme] = useState('default');
 
-  const { layout, photos, background, scrollDirection, layoutSchema } = useGalleryStore();
+  const { layout, photos, customBackground, customFrameStyle: _customFrameStyle, customStickers: _customStickers, scrollDirection, layoutSchema } = useGalleryStore();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Adapter functions to convert existing data structures to SimpleLayoutRenderer format
@@ -61,6 +62,14 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
         y: node.frame.y,
         width: node.frame.width,
         height: node.frame.height,
+        zIndex: node.zIndex || 0,
+        type: node.type || 'photo', // Use actual type if available
+        src: node.src,
+        caption: node.caption,
+        aspectRatio: node.aspectRatio,
+        stickerData: node.stickerData,
+        frameData: node.frameData,
+        backgroundData: node.backgroundData
       }))
     };
   };
@@ -74,6 +83,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       height: photo.height,
       src: photo.src,
       caption: photo.caption,
+      zIndex: 0,
+      layerName: photo.caption,
+      locked: false,
+      visible: true,
+      type: 'photo' as const,
     }));
   };
 
@@ -138,17 +152,50 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
     console.log('Theme changed to:', themeId);
   };
 
-  const backgroundClass = background === 'black' ? 'bg-black' 
-    : background === 'dark' ? 'bg-zinc-950' 
-    : background === 'light' ? 'bg-zinc-100' 
-    : background === 'white' ? 'bg-white' 
-    : background === 'paper' ? 'bg-[radial-gradient(circle_at_1px_1px,_#111_1px,_transparent_0)] [background-size:20px_20px]' 
-    : 'bg-gradient-to-b from-black to-zinc-900';
+  const getBackgroundStyle = () => {
+    if (customBackground.length === 0) {
+      return 'bg-gradient-to-b from-black to-zinc-900';
+    }
+
+    const background = customBackground[0];
+
+    // Handle blob URLs
+    if (background.startsWith('blob:')) {
+      return '';
+    }
+
+    // Handle predefined background options
+    switch (background) {
+      case 'black': return 'bg-black';
+      case 'dark': return 'bg-zinc-950';
+      case 'light': return 'bg-zinc-100';
+      case 'white': return 'bg-white';
+      case 'paper': return 'bg-[radial-gradient(circle_at_1px_1px,_#111_1px,_transparent_0)] [background-size:20px_20px]';
+      default: return 'bg-gradient-to-b from-black to-zinc-900';
+    }
+  };
+
+  const backgroundClass = getBackgroundStyle();
 
   const scrollClass = scrollDirection === 'horizontal' ? 'overflow-x-auto whitespace-nowrap [scrollbar-width:none] snap-x snap-mandatory' : '';
 
+  const getBackgroundStyles = () => {
+    if (customBackground.length > 0 && customBackground[0].startsWith('blob:')) {
+      return {
+        backgroundImage: `url(${customBackground[0]})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      };
+    }
+    return {};
+  };
+
   return (
-    <div className={`min-h-screen ${backgroundClass} font-sans`}>
+    <div
+      className={`min-h-screen ${backgroundClass} font-sans`}
+      style={getBackgroundStyles()}
+    >
       <ConnectButton />
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
@@ -225,7 +272,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
             <div className="max-w-7xl mx-auto">
               {layoutSchema ? (
                 <SimpleLayoutRenderer
-                  schema={convertToLayoutSchema(layoutSchema)}
+                  schema={layoutSchema.version >= 2 ? layoutSchema : convertToLayoutSchema(layoutSchema)}
                   photos={convertToPhotoRects(photos)}
                   onOpenLightbox={setLightboxIndex}
                 />

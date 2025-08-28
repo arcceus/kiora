@@ -8,7 +8,7 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { useGalleryStore } from '../../store/gallery';
-import type { GalleryLayout, ScrollDirection, GalleryBackground, SavedLayout } from '../../store/gallery';
+import type { GalleryLayout, ScrollDirection, SavedLayout } from '../../store/gallery';
 
 interface CustomizeDialogProps {
   open: boolean;
@@ -18,9 +18,9 @@ interface CustomizeDialogProps {
 type CustomizationTab = 'layout' | 'scroll' | 'background';
 
 export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenChange }) => {
-  const { layout: currentLayout, scrollDirection: currentScroll, background: currentBg, savedLayouts, frameStyle, setLayout, setScrollDirection, setBackground, setLayoutSchema, setFrameStyle } = useGalleryStore();
+  const { layout: currentLayout, scrollDirection: currentScroll, customBackground: currentBg, savedLayouts, customFrameStyle, setLayout, setScrollDirection, setCustomBackground, setLayoutSchema, setCustomFrameStyle } = useGalleryStore();
   const [activeTab, setActiveTab] = useState<CustomizationTab>('layout');
-  const [customizations, setCustomizations] = useState<{ layout: GalleryLayout; scroll: ScrollDirection; background: GalleryBackground }>({
+  const [customizations, setCustomizations] = useState<{ layout: GalleryLayout; scroll: ScrollDirection; background: string[] }>({
     layout: currentLayout,
     scroll: currentScroll,
     background: currentBg
@@ -50,7 +50,7 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
     { id: 'horizontal', name: 'Horizontal' }
   ];
 
-  const backgroundOptions: { id: GalleryBackground; name: string }[] = [
+  const backgroundOptions: { id: string; name: string }[] = [
     { id: 'black', name: 'Black' },
     { id: 'dark', name: 'Dark' },
     { id: 'light', name: 'Light' },
@@ -62,7 +62,7 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
   const handleApplyCustomizations = () => {
     setLayout(customizations.layout);
     setScrollDirection(customizations.scroll);
-    setBackground(customizations.background);
+    setCustomBackground(customizations.background);
     onOpenChange(false);
   };
 
@@ -120,14 +120,14 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
               <h4 className="text-sm font-medium mb-2">Photo Frame</h4>
               <div className="flex gap-2">
                 <button
-                  className={`px-3 py-1 rounded-md border ${frameStyle === 'square' ? 'border-blue-500' : 'border-gray-300'}`}
-                  onClick={() => setFrameStyle('square')}
+                  className={`px-3 py-1 rounded-md border ${customFrameStyle.includes('square') ? 'border-blue-500' : 'border-gray-300'}`}
+                  onClick={() => setCustomFrameStyle(['square'])}
                 >
                   Normal
                 </button>
                 <button
-                  className={`px-3 py-1 rounded-md border ${frameStyle === 'rounded' ? 'border-blue-500' : 'border-gray-300'}`}
-                  onClick={() => setFrameStyle('rounded')}
+                  className={`px-3 py-1 rounded-md border ${customFrameStyle.includes('rounded') ? 'border-blue-500' : 'border-gray-300'}`}
+                  onClick={() => setCustomFrameStyle(['rounded'])}
                 >
                   Rounded
                 </button>
@@ -170,12 +170,17 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
                   key={option.id}
                   className={`
                     p-3 border-2 rounded-lg cursor-pointer transition-all text-center
-                    ${customizations.background === option.id
+                    ${customizations.background.includes(option.id)
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                     }
                   `}
-                  onClick={() => setCustomizations(prev => ({ ...prev, background: option.id }))}
+                  onClick={() => setCustomizations(prev => ({
+                    ...prev,
+                    background: prev.background.includes(option.id)
+                      ? prev.background.filter(bg => bg !== option.id)
+                      : [...prev.background, option.id]
+                  }))}
                 >
                   <p className="text-sm font-medium">{option.name}</p>
                 </div>

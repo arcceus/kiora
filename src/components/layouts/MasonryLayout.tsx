@@ -8,8 +8,8 @@ interface MasonryLayoutProps {
 }
 
 export const MasonryLayout: React.FC<MasonryLayoutProps> = ({ photos, onOpenLightbox }) => {
-  const { frameStyle } = useGalleryStore();
-  const frameClass = frameStyle === 'rounded' ? 'rounded-3xl' : 'rounded-none';
+  const { customFrameStyle } = useGalleryStore();
+  const frameClass = customFrameStyle.includes('rounded') ? 'rounded-3xl' : 'rounded-none';
   return (
     <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 [column-fill:_balance]">
       {photos.map((photo, index) => (

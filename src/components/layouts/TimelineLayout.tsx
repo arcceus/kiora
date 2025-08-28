@@ -8,8 +8,8 @@ interface TimelineLayoutProps {
 }
 
 export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ photos, onOpenLightbox }) => {
-  const { frameStyle } = useGalleryStore();
-  const frameClass = frameStyle === 'rounded' ? 'rounded-2xl' : 'rounded-none';
+  const { customFrameStyle } = useGalleryStore();
+  const frameClass = customFrameStyle.includes('rounded') ? 'rounded-2xl' : 'rounded-none';
   return (
     <div className="relative max-w-3xl mx-auto">
       <div className="absolute left-4 top-0 bottom-0 w-px bg-black-700" />
