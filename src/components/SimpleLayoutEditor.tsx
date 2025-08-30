@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGalleryStore } from '../store/gallery';
 import { DraggableRect } from './DraggableRect';
+import { ThemesDialog } from './dialog/ThemesDialog';
 
 export type ElementType = 'photo' | 'sticker' | 'frame' | 'background';
 
@@ -44,6 +45,7 @@ export interface PhotoRect {
   frameData?: FrameData;
   backgroundData?: BackgroundData;
   zIndex?: number;
+  rotation?: number; // Rotation in degrees (0-360)
 }
 
 export interface LayoutSchema {
@@ -53,12 +55,13 @@ export interface LayoutSchema {
 
 export const SimpleLayoutEditor = () => {
   const navigate = useNavigate();
-  const { setLayoutSchema } = useGalleryStore();
+  const { setLayoutSchema, savedLayouts } = useGalleryStore();
   const [rects, setRects] = useState<PhotoRect[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploadedStickers, setUploadedStickers] = useState<StickerData[]>([]);
   const [uploadedFrames, setUploadedFrames] = useState<FrameData[]>([]);
   const [uploadedBackgrounds, setUploadedBackgrounds] = useState<BackgroundData[]>([]);
+  const [themesDialogOpen, setThemesDialogOpen] = useState(false);
 
   const CANVAS_WIDTH = 1000;
   const CANVAS_HEIGHT = 650;
@@ -84,7 +87,8 @@ export const SimpleLayoutEditor = () => {
         aspectRatio: rect.aspectRatio,
         stickerData: rect.stickerData,
         frameData: rect.frameData,
-        backgroundData: rect.backgroundData
+        backgroundData: rect.backgroundData,
+        rotation: rect.rotation || 0
       })),
       version: 2 as const // Updated version to indicate enhanced schema
     };
@@ -226,6 +230,7 @@ export const SimpleLayoutEditor = () => {
       height: 100,
       type: 'photo',
       zIndex: rects.length,
+      rotation: 0,
     };
     setRects([...rects, newRect]);
   };
@@ -256,6 +261,7 @@ export const SimpleLayoutEditor = () => {
       aspectRatio: aspectRatio,
       type: 'photo',
       zIndex: rects.length,
+      rotation: 0,
     };
     setRects([...rects, newRect]);
   };
@@ -270,6 +276,7 @@ export const SimpleLayoutEditor = () => {
       type: 'sticker',
       stickerData: stickerData,
       zIndex: rects.length,
+      rotation: 0,
     };
     setRects([...rects, newRect]);
   };
@@ -284,6 +291,7 @@ export const SimpleLayoutEditor = () => {
       type: 'frame',
       frameData: frameData,
       zIndex: rects.length,
+      rotation: 0,
     };
     setRects([...rects, newRect]);
   };
@@ -306,6 +314,7 @@ export const SimpleLayoutEditor = () => {
       type: 'background',
       backgroundData: backgroundData,
       zIndex: Math.max(0, minZIndex), // Background should be behind all other elements
+      rotation: 0,
     };
 
     setRects([...filteredRects, newRect]);
@@ -357,7 +366,7 @@ export const SimpleLayoutEditor = () => {
   };
 
   const updateRect = (id: string, updates: Partial<PhotoRect>) => {
-    setRects(rects.map(rect => 
+    setRects(prevRects => prevRects.map(rect =>
       rect.id === id ? { ...rect, ...updates } : rect
     ));
   };
@@ -556,25 +565,57 @@ export const SimpleLayoutEditor = () => {
             {selectedId && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Layer Controls</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => bringToFront(selectedId)}
-                    className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
-                  >
-                    Bring to Front
-                  </button>
-                  <button
-                    onClick={() => sendToBack(selectedId)}
-                    className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
-                  >
-                    Send to Back
-                  </button>
-                  <button
-                    onClick={() => deleteElement(selectedId)}
-                    className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                  >
-                    Delete
-                  </button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => bringToFront(selectedId)}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                    >
+                      Bring to Front
+                    </button>
+                    <button
+                      onClick={() => sendToBack(selectedId)}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                    >
+                      Send to Back
+                    </button>
+                    <button
+                      onClick={() => deleteElement(selectedId)}
+                      className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  {/* Rotation Control */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 min-w-12">Rotate:</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="360"
+                      step="1"
+                      value={rects.find(r => r.id === selectedId)?.rotation || 0}
+                      onChange={(e) => {
+                        const rotation = parseInt(e.target.value);
+                        updateRect(selectedId, { rotation });
+                      }}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max="360"
+                      step="1"
+                      value={rects.find(r => r.id === selectedId)?.rotation || 0}
+                      onChange={(e) => {
+                        const rotation = Math.max(0, Math.min(360, parseInt(e.target.value) || 0));
+                        updateRect(selectedId, { rotation });
+                      }}
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-600">°</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -582,12 +623,7 @@ export const SimpleLayoutEditor = () => {
             {/* Export */}
             <div className="flex justify-end">
               <button
-                onClick={() => {
-                  const layout = exportLayout();
-                  const tileSchema = convertToLayoutTileSchema(layout);
-                  setLayoutSchema(tileSchema);
-                  navigate('/');
-                }}
+                onClick={() => setThemesDialogOpen(true)}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
               >
                 Save & Export Layout
@@ -624,6 +660,21 @@ export const SimpleLayoutEditor = () => {
           ))}
         </div>
       </div>
+
+      {/* Themes Dialog */}
+      <ThemesDialog
+        open={themesDialogOpen}
+        onOpenChange={setThemesDialogOpen}
+        currentLayoutSchema={exportLayout() ? convertToLayoutTileSchema(exportLayout()) : null}
+        onThemeChange={(themeId) => {
+          // When a theme is selected, load it and navigate to gallery
+          const selectedLayout = savedLayouts.find(l => l.id === themeId);
+          if (selectedLayout) {
+            setLayoutSchema(selectedLayout.schema);
+            navigate('/');
+          }
+        }}
+      />
     </div>
   );
 };

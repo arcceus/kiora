@@ -21,14 +21,25 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
   canvasWidth,
   canvasHeight
 }) => {
+    const wrapperRef = React.useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
+    const [isRotating, setIsRotating] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, rectX: 0, rectY: 0 });
     const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+    const [rotationStart, setRotationStart] = useState({ x: 0, y: 0, rotation: 0 });
     const [hasStartedDrag, setHasStartedDrag] = useState(false);
 
+    // Helper function to calculate rotation angle from mouse position
+    const calculateRotation = (mouseX: number, mouseY: number, centerX: number, centerY: number): number => {
+      const deltaX = mouseX - centerX;
+      const deltaY = mouseY - centerY;
+      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+      return (angle + 360) % 360; // Ensure positive angle between 0-360
+    };
+
     const handleMouseDown = (e: React.MouseEvent) => {
-      if (isResizing) return; // Don't start drag if we're resizing
+      if (isResizing || isRotating) return; // Don't start drag if we're resizing or rotating
       e.preventDefault(); // Prevent default browser behavior
       onSelect();
       setHasStartedDrag(true);
@@ -109,6 +120,48 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
       onUpdate({ width: newWidth, height: newHeight });
     };
 
+    const handleRotationMouseDown = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onSelect(); // Ensure the element is selected when rotating
+      setIsRotating(true);
+      setRotationStart({
+        x: e.clientX,
+        y: e.clientY,
+        rotation: rect.rotation || 0
+      });
+    };
+
+    const handleRotationMouseMove = (e: MouseEvent) => {
+      if (!isRotating) return;
+
+      // Prefer actual element bounding box for accurate center regardless of canvas offsets
+      let centerX: number;
+      let centerY: number;
+      const el = wrapperRef.current;
+      if (el) {
+        const box = el.getBoundingClientRect();
+        centerX = box.left + box.width / 2;
+        centerY = box.top + box.height / 2;
+      } else {
+        // Fallback to logical center if ref not ready
+        centerX = rect.x + rect.width / 2;
+        centerY = rect.y + rect.height / 2;
+      }
+
+      const currentMouseX = e.clientX;
+      const currentMouseY = e.clientY;
+      const startMouseX = rotationStart.x;
+      const startMouseY = rotationStart.y;
+
+      const currentAngle = calculateRotation(currentMouseX, currentMouseY, centerX, centerY);
+      const startAngle = calculateRotation(startMouseX, startMouseY, centerX, centerY);
+      const deltaAngle = currentAngle - startAngle;
+      const newRotation = (rotationStart.rotation + deltaAngle + 360) % 360;
+
+      onUpdate({ rotation: Math.round(newRotation) });
+    };
+
     React.useEffect(() => {
       if (hasStartedDrag) {
         const handleMouseUp = () => {
@@ -135,6 +188,18 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
         };
       }
     }, [isResizing, resizeStart, rect.x, rect.y, canvasWidth, canvasHeight, onUpdate]);
+
+    React.useEffect(() => {
+      if (isRotating) {
+        const handleMouseUp = () => setIsRotating(false);
+        document.addEventListener('mousemove', handleRotationMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          document.removeEventListener('mousemove', handleRotationMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }
+    }, [isRotating, rotationStart, rect.x, rect.y, rect.width, rect.height, onUpdate]);
 
     const renderElementContent = () => {
       switch (rect.type) {
@@ -231,23 +296,41 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
       }
     };
 
-    // Background elements are not draggable
+    // Background elements are not draggable but can be rotated
     if (rect.type === 'background') {
       return (
         <div
+          ref={wrapperRef}
           className="absolute inset-0"
           style={{
             zIndex: rect.zIndex || 0,
+            transform: `rotate(${(rect.rotation || 0)}deg)`,
+            transformOrigin: 'center center',
           }}
           onMouseDown={onSelect}
         >
           {renderElementContent()}
+
+          {/* Rotation handle for background */}
+          {selected && (
+            <div
+              className="absolute top-4 left-1/2 w-4 h-4 bg-green-500 cursor-grab rounded-full border-2 border-white"
+              onMouseDown={handleRotationMouseDown}
+              style={{
+                zIndex: 10,
+                transform: `translate(-50%, 0)`,
+                transformOrigin: 'center bottom'
+              }}
+              title="Rotate background"
+            />
+          )}
         </div>
       );
     }
 
     return (
       <motion.div
+        ref={wrapperRef}
         className={`absolute cursor-move select-none ${
           rect.type === 'sticker' || rect.type === 'frame'
             ? ''
@@ -260,9 +343,10 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
           height: rect.height,
           zIndex: rect.zIndex || 0,
           userSelect: 'none',
+          transformOrigin: 'center center',
         }}
-        whileHover={{ scale: selected ? 1 : 1 }}
-        whileTap={{ scale: 1 }}
+        animate={{ rotate: rect.rotation || 0 }}
+        initial={false}
         onMouseDown={handleMouseDown}
         draggable={false}
       >
@@ -274,6 +358,20 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
             className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 cursor-se-resize"
             onMouseDown={handleResizeMouseDown}
             style={{ zIndex: 10 }}
+          />
+        )}
+
+        {/* Rotation handle */}
+        {selected && (
+          <div
+            className="absolute -top-6 left-1/2 w-4 h-4 bg-green-500 cursor-grab rounded-full border-2 border-white"
+            onMouseDown={handleRotationMouseDown}
+            style={{
+              zIndex: 10,
+              transform: `translate(-50%, 0)`,
+              transformOrigin: 'center bottom'
+            }}
+            title="Rotate element"
           />
         )}
       </motion.div>

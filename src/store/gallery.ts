@@ -21,6 +21,7 @@ export interface LayoutNodeSchema {
   src?: string;
   caption?: string;
   aspectRatio?: { width: number; height: number };
+  rotation?: number;
   stickerData?: {
     emoji?: string;
     src?: string;
@@ -73,6 +74,7 @@ interface GalleryState {
   setLayoutSchema: (schema: LayoutTileSchema | null) => void;
   addSavedLayout: (name: string, schema: LayoutTileSchema) => void;
   removeSavedLayout: (id: string) => void;
+  clearSavedLayouts: () => void;
   setCustomFrameStyle: (style: string[]) => void;
   setCustomStickers: (stickers: string[]) => void;
   refreshPhotos: () => Promise<void>;
@@ -132,13 +134,33 @@ const placeholderPhotos: PhotoItem[] = [
   { id: 'p51', src: 'https://picsum.photos/id/150/1000/700', width: 1000, height: 700, caption: 'City' },
 ];
 
+// Load saved layouts from localStorage
+const loadSavedLayouts = (): SavedLayout[] => {
+  try {
+    const saved = localStorage.getItem('savedLayouts');
+    return saved ? JSON.parse(saved) : [];
+  } catch (error) {
+    console.error('Failed to load saved layouts:', error);
+    return [];
+  }
+};
+
+// Save layouts to localStorage
+const saveSavedLayouts = (layouts: SavedLayout[]) => {
+  try {
+    localStorage.setItem('savedLayouts', JSON.stringify(layouts));
+  } catch (error) {
+    console.error('Failed to save layouts:', error);
+  }
+};
+
 export const useGalleryStore = create<GalleryState>((set) => ({
   layout: 'grid',
   photos: placeholderPhotos,
   scrollDirection: 'vertical',
   customBackground: [],
   layoutSchema: null,
-  savedLayouts: [],
+  savedLayouts: loadSavedLayouts(),
   customFrameStyle: [],
   customStickers: [],
   setLayout: (layout) => set({ layout }),
@@ -146,8 +168,25 @@ export const useGalleryStore = create<GalleryState>((set) => ({
   setScrollDirection: (dir) => set({ scrollDirection: dir }),
   setCustomBackground: (bg) => set({ customBackground: bg }),
   setLayoutSchema: (schema) => set({ layoutSchema: schema }),
-  addSavedLayout: (name, schema) => set((s) => ({ savedLayouts: [...s.savedLayouts, { id: `${Date.now()}`, name, schema }] })),
-  removeSavedLayout: (id) => set((s) => ({ savedLayouts: s.savedLayouts.filter(l => l.id !== id) })),
+  addSavedLayout: (name, schema) => {
+    const newLayout: SavedLayout = { id: `${Date.now()}`, name, schema };
+    set((s) => {
+      const updatedLayouts = [...s.savedLayouts, newLayout];
+      saveSavedLayouts(updatedLayouts);
+      return { savedLayouts: updatedLayouts };
+    });
+  },
+  removeSavedLayout: (id) => {
+    set((s) => {
+      const updatedLayouts = s.savedLayouts.filter(l => l.id !== id);
+      saveSavedLayouts(updatedLayouts);
+      return { savedLayouts: updatedLayouts };
+    });
+  },
+  clearSavedLayouts: () => {
+    saveSavedLayouts([]);
+    set({ savedLayouts: [] });
+  },
   setCustomFrameStyle: (style) => set({ customFrameStyle: style }),
   setCustomStickers: (stickers) => set({ customStickers: stickers }),
   refreshPhotos: async () => {

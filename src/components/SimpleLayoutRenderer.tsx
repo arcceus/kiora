@@ -214,6 +214,8 @@ interface SimpleLayoutRendererProps {
                           width: rect.frame.width * scale,
                           height: rect.frame.height * scale,
                           zIndex: (isTileSchema(schema) ? node?.zIndex : rect.zIndex) || rectIndex,
+                          transform: `rotate(${(isTileSchema(schema) ? node?.rotation : rect.rotation) || 0}deg)`,
+                          transformOrigin: 'center center',
                         }}
                       >
                         {renderElement(node || rect, computedPhotoIndex)}
@@ -261,18 +263,20 @@ interface SimpleLayoutRendererProps {
                   const computedPhotoIndex = slotPos === -1 ? undefined : (tileIndex * photoSlotsPerTile + slotPos);
                   const node = isTileSchema(schema) ? nonBackgroundNodes[rectIndex] : null;
 
-                  return (
-                    <div
-                      key={`${tileIndex}-${rectIndex}`}
-                      className="absolute"
-                      style={{
-                        left: rect.frame.x * scale,
-                        top: rect.frame.y * scale,
-                        width: rect.frame.width * scale,
-                        height: rect.frame.height * scale,
-                        zIndex: (isTileSchema(schema) ? node?.zIndex : rect.zIndex) || rectIndex,
-                      }}
-                    >
+                                      return (
+                      <div
+                        key={`${tileIndex}-${rectIndex}`}
+                        className="absolute"
+                        style={{
+                          left: rect.frame.x * scale,
+                          top: rect.frame.y * scale,
+                          width: rect.frame.width * scale,
+                          height: rect.frame.height * scale,
+                          zIndex: (isTileSchema(schema) ? node?.zIndex : rect.zIndex) || rectIndex,
+                          transform: `rotate(${(isTileSchema(schema) ? node?.rotation : rect.rotation) || 0}deg)`,
+                          transformOrigin: 'center center',
+                        }}
+                      >
                       {renderElement(node || rect, computedPhotoIndex)}
                     </div>
                   );
