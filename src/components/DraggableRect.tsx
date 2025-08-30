@@ -25,12 +25,13 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
     const [isResizing, setIsResizing] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, rectX: 0, rectY: 0 });
     const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+    const [hasStartedDrag, setHasStartedDrag] = useState(false);
 
     const handleMouseDown = (e: React.MouseEvent) => {
       if (isResizing) return; // Don't start drag if we're resizing
       e.preventDefault(); // Prevent default browser behavior
       onSelect();
-      setIsDragging(true);
+      setHasStartedDrag(true);
       setDragStart({
         x: e.clientX,
         y: e.clientY,
@@ -40,10 +41,18 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
+      if (!hasStartedDrag) return;
 
       const deltaX = e.clientX - dragStart.x;
       const deltaY = e.clientY - dragStart.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // Only start dragging if mouse has moved more than 5 pixels
+      if (!isDragging && distance > 5) {
+        setIsDragging(true);
+      }
+
+      if (!isDragging) return;
 
       const newX = Math.max(0, Math.min(canvasWidth - rect.width, dragStart.rectX + deltaX));
       const newY = Math.max(0, Math.min(canvasHeight - rect.height, dragStart.rectY + deltaY));
@@ -53,6 +62,8 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
 
     const handleResizeMouseDown = (e: React.MouseEvent) => {
       e.stopPropagation();
+      e.preventDefault();
+      onSelect(); // Ensure the element is selected when resizing
       setIsResizing(true);
       setResizeStart({
         x: e.clientX,
@@ -99,8 +110,11 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
     };
 
     React.useEffect(() => {
-      if (isDragging) {
-        const handleMouseUp = () => setIsDragging(false);
+      if (hasStartedDrag) {
+        const handleMouseUp = () => {
+          setIsDragging(false);
+          setHasStartedDrag(false);
+        };
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         return () => {
@@ -108,7 +122,7 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
           document.removeEventListener('mouseup', handleMouseUp);
         };
       }
-    }, [isDragging, dragStart, rect.width, rect.height, canvasWidth, canvasHeight, onUpdate]);
+    }, [hasStartedDrag, isDragging, dragStart, rect.width, rect.height, canvasWidth, canvasHeight, onUpdate]);
 
     React.useEffect(() => {
       if (isResizing) {

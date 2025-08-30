@@ -29,10 +29,15 @@ interface SimpleLayoutRendererProps {
       // Default to 'photo' for legacy rects without explicit type
       return (node && typeof node.type === 'string') ? node.type : 'photo';
     };
-    const photoSlotsPerTile = nodes.filter((n: any) => getElementType(n) === 'photo').length || 0;
+    
+    // Separate background elements from other elements
+    const backgroundNodes = nodes.filter((n: any) => getElementType(n) === 'background');
+    const nonBackgroundNodes = nodes.filter((n: any) => getElementType(n) !== 'background');
+    
+    const photoSlotsPerTile = nonBackgroundNodes.filter((n: any) => getElementType(n) === 'photo').length || 0;
     // For each rect index, compute its position among photo slots within a tile (-1 for non-photos)
     let photoCounter = 0;
-    const photoSlotPositions = nodes.map((n: any) => {
+    const photoSlotPositions = nonBackgroundNodes.map((n: any) => {
       if (getElementType(n) === 'photo') {
         const position = photoCounter;
         photoCounter += 1;
@@ -96,7 +101,7 @@ interface SimpleLayoutRendererProps {
                 <img
                   src={elementData.backgroundData.src}
                   alt={elementData.backgroundData.name || 'Background'}
-                  className="w-full h-full object-cover absolute inset-0 select-none"
+                  className="w-screen h-screen object-cover absolute inset-0 select-none"
                   style={{
                     opacity: elementData.backgroundData.opacity || 1,
                     userSelect: 'none',
@@ -106,7 +111,7 @@ interface SimpleLayoutRendererProps {
                 />
               ) : (
                 <div
-                  className="w-full h-full absolute inset-0"
+                  className="w-screen h-screen absolute inset-0"
                   style={{
                     backgroundColor: '#F3F4F6', // Default gray background
                     opacity: elementData?.backgroundData?.opacity || 1
@@ -168,9 +173,80 @@ interface SimpleLayoutRendererProps {
   
     if (scrollDirection === 'horizontal') {
       return (
-        <div ref={containerRef} className="w-full overflow-x-auto whitespace-nowrap">
-          <div className="relative flex">
-            {/* Repeat pattern for all photos */}
+        <div className="relative w-full h-full">
+          {/* Fixed background layer - fills entire screen */}
+          {backgroundNodes.map((bgNode: any, bgIndex: number) => (
+            <div
+              key={`bg-${bgIndex}`}
+              className="fixed inset-0 pointer-events-none"
+              style={{
+                zIndex: -10,
+              }}
+            >
+              {renderElement(isTileSchema(schema) ? bgNode : bgNode)}
+            </div>
+          ))}
+          
+          <div ref={containerRef} className="w-full overflow-x-auto whitespace-nowrap">
+            <div className="relative flex">
+              {/* Repeat pattern for all photos and non-background elements */}
+              {Array.from({ length: Math.ceil(photos.length / Math.max(photoSlotsPerTile, 1)) }).map((_, tileIndex) => (
+                <div
+                  key={tileIndex}
+                  className="relative flex-shrink-0"
+                  style={{
+                    width: (isTileSchema(schema) ? schema.tileSize.width : schema.canvas.width) * scale,
+                    height: (isTileSchema(schema) ? schema.tileSize.height : schema.canvas.height) * scale
+                  }}
+                >
+                  {nonBackgroundNodes.map((rect: any, rectIndex: number) => {
+                    const slotPos = photoSlotPositions[rectIndex];
+                    const computedPhotoIndex = slotPos === -1 ? undefined : (tileIndex * photoSlotsPerTile + slotPos);
+                    const node = isTileSchema(schema) ? nonBackgroundNodes[rectIndex] : null;
+
+                    return (
+                      <div
+                        key={`${tileIndex}-${rectIndex}`}
+                        className="absolute"
+                        style={{
+                          left: rect.frame.x * scale,
+                          top: rect.frame.y * scale,
+                          width: rect.frame.width * scale,
+                          height: rect.frame.height * scale,
+                          zIndex: (isTileSchema(schema) ? node?.zIndex : rect.zIndex) || rectIndex,
+                        }}
+                      >
+                        {renderElement(node || rect, computedPhotoIndex)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Vertical scrolling layout
+    return (
+      <div className="relative w-full h-full">
+        {/* Fixed background layer - fills entire screen */}
+        {backgroundNodes.map((bgNode: any, bgIndex: number) => (
+          <div
+            key={`bg-${bgIndex}`}
+            className="fixed inset-0 pointer-events-none"
+            style={{
+              zIndex: -10,
+            }}
+          >
+            {renderElement(isTileSchema(schema) ? bgNode : bgNode)}
+          </div>
+        ))}
+        
+        <div ref={containerRef} className="w-full overflow-y-auto">
+          <div className="relative flex flex-col items-center">
+            {/* Repeat pattern for all photos and non-background elements */}
             {Array.from({ length: Math.ceil(photos.length / Math.max(photoSlotsPerTile, 1)) }).map((_, tileIndex) => (
               <div
                 key={tileIndex}
@@ -180,10 +256,10 @@ interface SimpleLayoutRendererProps {
                   height: (isTileSchema(schema) ? schema.tileSize.height : schema.canvas.height) * scale
                 }}
               >
-                {nodes.map((rect: any, rectIndex: number) => {
+                {nonBackgroundNodes.map((rect: any, rectIndex: number) => {
                   const slotPos = photoSlotPositions[rectIndex];
                   const computedPhotoIndex = slotPos === -1 ? undefined : (tileIndex * photoSlotsPerTile + slotPos);
-                  const node = isTileSchema(schema) ? nodes[rectIndex] : null;
+                  const node = isTileSchema(schema) ? nonBackgroundNodes[rectIndex] : null;
 
                   return (
                     <div
@@ -204,47 +280,6 @@ interface SimpleLayoutRendererProps {
               </div>
             ))}
           </div>
-        </div>
-      );
-    }
-
-    // Vertical scrolling layout
-    return (
-      <div ref={containerRef} className="w-full overflow-y-auto">
-        <div className="relative flex flex-col items-center">
-          {/* Repeat pattern for all photos */}
-          {Array.from({ length: Math.ceil(photos.length / Math.max(photoSlotsPerTile, 1)) }).map((_, tileIndex) => (
-            <div
-              key={tileIndex}
-              className="relative flex-shrink-0"
-              style={{
-                width: (isTileSchema(schema) ? schema.tileSize.width : schema.canvas.width) * scale,
-                height: (isTileSchema(schema) ? schema.tileSize.height : schema.canvas.height) * scale
-              }}
-            >
-              {nodes.map((rect: any, rectIndex: number) => {
-                const slotPos = photoSlotPositions[rectIndex];
-                const computedPhotoIndex = slotPos === -1 ? undefined : (tileIndex * photoSlotsPerTile + slotPos);
-                const node = isTileSchema(schema) ? nodes[rectIndex] : null;
-
-                return (
-                  <div
-                    key={`${tileIndex}-${rectIndex}`}
-                    className="absolute"
-                    style={{
-                      left: rect.frame.x * scale,
-                      top: rect.frame.y * scale,
-                      width: rect.frame.width * scale,
-                      height: rect.frame.height * scale,
-                      zIndex: (isTileSchema(schema) ? node?.zIndex : rect.zIndex) || rectIndex,
-                    }}
-                  >
-                    {renderElement(node || rect, computedPhotoIndex)}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
         </div>
       </div>
     );
