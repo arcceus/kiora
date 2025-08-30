@@ -50,14 +50,7 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
     { id: 'horizontal', name: 'Horizontal' }
   ];
 
-  const backgroundOptions: { id: string; name: string }[] = [
-    { id: 'black', name: 'Black' },
-    { id: 'dark', name: 'Dark' },
-    { id: 'light', name: 'Light' },
-    { id: 'white', name: 'White' },
-    { id: 'paper', name: 'Paper' },
-    { id: 'gradient', name: 'Gradient' }
-  ];
+  // No predefined background options - users upload their own backgrounds
 
   const handleApplyCustomizations = () => {
     setLayout(customizations.layout);

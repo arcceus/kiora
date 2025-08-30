@@ -81,64 +81,12 @@ interface SimpleLayoutRendererProps {
               </div>
             );
           } else {
-            // Predefined frame style
-            const frameStyle = elementData?.frameData?.style;
-            const frameColor = elementData?.frameData?.color || '#000000';
-            const frameThickness = elementData?.frameData?.thickness || 4;
-
-            switch (frameStyle) {
-              case 'rounded':
-                return (
-                  <div
-                    className="w-full h-full rounded-lg flex items-center justify-center bg-gray-200"
-                    style={{
-                      border: `${frameThickness}px solid ${frameColor}`,
-                      borderRadius: '12px'
-                    }}
-                  >
-                    <div className="text-xs text-gray-600">Photo Frame</div>
-                  </div>
-                );
-
-              case 'polaroid':
-                return (
-                  <div
-                    className="w-full h-full bg-white flex flex-col items-center justify-center"
-                    style={{
-                      border: `${frameThickness}px solid ${frameColor}`,
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
-                    }}
-                  >
-                    <div className="flex-1 flex items-center justify-center bg-gray-200 w-full">
-                      <div className="text-xs text-gray-600">Photo</div>
-                    </div>
-                    <div className="w-3/4 h-8 mt-2 bg-gray-100"></div>
-                  </div>
-                );
-
-              case 'vintage':
-                return (
-                  <div
-                    className="w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-100 to-yellow-200"
-                    style={{
-                      border: `${frameThickness}px solid ${frameColor}`,
-                      borderImage: `linear-gradient(45deg, ${frameColor}, transparent) 1`
-                    }}
-                  >
-                    <div className="text-xs text-gray-600">Vintage Frame</div>
-                  </div>
-                );
-
-              default: // simple
-                return (
-                  <div
-                    className="w-full h-full flex items-center justify-center bg-gray-200"
-                    style={{ border: `${frameThickness}px solid ${frameColor}` }}
-                  >
-                    <div className="text-xs text-gray-600">Photo Frame</div>
-                  </div>
-                );
-            }
+            // No PNG frame uploaded - show placeholder like stickers
+            return (
+              <div className="flex items-center justify-center w-full h-full text-4xl">
+                🖼️
+              </div>
+            );
           }
 
         case 'background':
@@ -160,10 +108,7 @@ interface SimpleLayoutRendererProps {
                 <div
                   className="w-full h-full absolute inset-0"
                   style={{
-                    backgroundColor: elementData?.backgroundData?.name === 'Solid Blue' ? '#3B82F6' :
-                                   elementData?.backgroundData?.name === 'Solid Red' ? '#EF4444' :
-                                   elementData?.backgroundData?.name === 'Solid Green' ? '#10B981' :
-                                   elementData?.backgroundData?.name === 'Solid Yellow' ? '#F59E0B' : '#F3F4F6',
+                    backgroundColor: '#F3F4F6', // Default gray background
                     opacity: elementData?.backgroundData?.opacity || 1
                   }}
                 />

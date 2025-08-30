@@ -362,35 +362,11 @@ export const SimpleLayoutEditor = () => {
     ));
   };
 
-  // Predefined sticker options
-  const stickerOptions = [
-    { emoji: '🎨', color: '#FF6B6B' },
-    { emoji: '⭐', color: '#4ECDC4' },
-    { emoji: '🌟', color: '#45B7D1' },
-    { emoji: '💖', color: '#F9CA24' },
-    { emoji: '🌸', color: '#FF9FF3' },
-    { emoji: '🎪', color: '#54A0FF' },
-    { emoji: '🎈', color: '#5F27CD' },
-    { emoji: '✨', color: '#00D2D3' },
-  ];
+  // No predefined sticker options - users upload their own
 
-  // Predefined frame options
-  const frameOptions = [
-    { style: 'simple' as const, color: '#000000', thickness: 4 },
-    { style: 'rounded' as const, color: '#FF6B6B', thickness: 6 },
-    { style: 'polaroid' as const, color: '#F9CA24', thickness: 8 },
-    { style: 'vintage' as const, color: '#6C5CE7', thickness: 5 },
-  ];
+  // No predefined frame options - users upload their own PNG frames
 
-  // Predefined background options
-  const backgroundOptions = [
-    { src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDIwIDAgTCAwIDAgMCAyMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZGRkIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=', name: 'Grid', opacity: 0.1 },
-    { src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZG90cyIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48Y2lyY2xlIGN4PSI1IiBjeT0iNSIgcj0iMSIgZmlsbD0iIzk5OSIgb3BhY2l0eT0iMC4zIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2RvdHMpIi8+PC9zdmc+', name: 'Dots', opacity: 0.3 },
-    { src: '', name: 'Solid Blue', opacity: 1.0 },
-    { src: '', name: 'Solid Red', opacity: 1.0 },
-    { src: '', name: 'Solid Green', opacity: 1.0 },
-    { src: '', name: 'Solid Yellow', opacity: 1.0 },
-  ];
+  // No predefined background options - users upload their own backgrounds
 
   return (
     <div className="flex justify-center items-start flex-col min-h-screen bg-gray-50">
@@ -455,17 +431,7 @@ export const SimpleLayoutEditor = () => {
                 </label>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* Predefined stickers */}
-                {stickerOptions.map((sticker, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addSticker(sticker)}
-                    className="w-10 h-10 text-2xl bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors"
-                    title={`Add ${sticker.emoji} sticker`}
-                  >
-                    {sticker.emoji}
-                  </button>
-                ))}
+                {/* No predefined stickers - users upload their own */}
                 {/* Uploaded stickers */}
                 {uploadedStickers.map((sticker, index) => (
                   <button
@@ -500,18 +466,7 @@ export const SimpleLayoutEditor = () => {
                 </label>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* Predefined frames */}
-                {frameOptions.map((frame, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addFrame(frame)}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm border-2 transition-colors"
-                    style={{ borderColor: frame.color }}
-                    title={`Add ${frame.style} frame`}
-                  >
-                    {frame.style.charAt(0).toUpperCase() + frame.style.slice(1)}
-                  </button>
-                ))}
+                {/* No predefined frames - users upload their own PNG frames */}
                 {/* Uploaded frames */}
                 {uploadedFrames.map((frame, index) => (
                   <button
@@ -555,24 +510,7 @@ export const SimpleLayoutEditor = () => {
                 )}
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* Predefined backgrounds */}
-                {backgroundOptions.map((background, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addBackground(background)}
-                    className="w-16 h-10 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors overflow-hidden border border-gray-300"
-                    title={`Add ${background.name} background`}
-                  >
-                    <div
-                      className="w-full h-full"
-                      style={{
-                        backgroundImage: `url(${background.src})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                      }}
-                    />
-                  </button>
-                ))}
+                {/* No predefined backgrounds - users upload their own */}
                 {/* Uploaded backgrounds */}
                 {uploadedBackgrounds.map((background, index) => (
                   <button
