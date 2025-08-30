@@ -1,5 +1,5 @@
 // src/components/GalleryView.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +12,7 @@ import {
   Download,
   Share
 } from 'lucide-react';
-import { UploadDialog } from './dialog/UploadDialog';
+import { ProtectedUploadDialog } from './dialog/ProtectedUploadDialog';
 import { ThemesDialog } from './dialog/ThemesDialog';
 import { CustomizeDialog } from './dialog/CustomizeDialog';
 import { FavouritesDialog } from './dialog/FavouritesDialog';
@@ -26,7 +26,7 @@ import type { LayoutSchema, PhotoRect } from './SimpleLayoutEditor';
 import { MasonryLayout } from './layouts/MasonryLayout';
 import { PolaroidLayout } from './layouts/PolaroidLayout';
 import { TimelineLayout } from './layouts/TimelineLayout';
-import { ConnectButton, useApi } from "@arweave-wallet-kit/react";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
 interface GalleryViewProps {
   children?: React.ReactNode;
 }
@@ -34,8 +34,6 @@ interface GalleryViewProps {
 export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const api = useApi();
-  console.log("gayman", api);
 
   // Dialog states
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -49,8 +47,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   // Current theme state (for themes dialog)
   const [currentTheme, setCurrentTheme] = useState('default');
 
-  const { layout, photos, customBackground, customFrameStyle: _customFrameStyle, customStickers: _customStickers, scrollDirection, layoutSchema } = useGalleryStore();
+  const { layout, photos, customBackground, customFrameStyle: _customFrameStyle, customStickers: _customStickers, scrollDirection, layoutSchema, refreshPhotos } = useGalleryStore();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Load photos on component mount
+  useEffect(() => {
+    refreshPhotos();
+  }, [refreshPhotos]);
 
   // Adapter functions to convert existing data structures to SimpleLayoutRenderer format
   const convertToLayoutSchema = (tileSchema: any): LayoutSchema => {
@@ -103,7 +106,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
     {
       icon: Upload,
       label: 'Upload',
-      onClick: () => setUploadOpen(true)
+      onClick: () => setUploadOpen(true),
+      requiresAuth: true
     },
     {
       icon: Palette,
@@ -142,8 +146,13 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
     },
   ];
 
-  const handleMenuItemClick = (onClick: () => void) => {
-    onClick();
+  const handleMenuItemClick = (onClick: () => void, requiresAuth?: boolean) => {
+    if (requiresAuth) {
+      // For authenticated actions, we'll let the component handle the auth check
+      onClick();
+    } else {
+      onClick();
+    }
     setIsMenuOpen(false);
   };
 
@@ -196,7 +205,20 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       className={`min-h-screen ${backgroundClass} font-sans`}
       style={getBackgroundStyles()}
     >
-      <ConnectButton />
+      {/* Authentication */}
+      <div className="fixed top-6 left-6 z-50">
+        <SignedOut>
+          <SignInButton mode="modal">
+            <button className="px-4 py-2 bg-gray-50 text-black rounded-lg hover:cursor-pointer hover:bg-gray-200 transition-all">
+              Sign In
+            </button>
+          </SignInButton>
+        </SignedOut>
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+      </div>
+
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
         <motion.button
@@ -238,10 +260,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
               initial={{ opacity: 0, scale: 0.8, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: -10 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 400, 
-                damping: 25 
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 25
               }}
               className="absolute top-16 right-0 bg-black-900 rounded-2xl shadow-2xl border border-black-700 overflow-hidden min-w-[200px]"
             >
@@ -252,7 +274,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => handleMenuItemClick(item.onClick)}
+                    onClick={() => handleMenuItemClick(item.onClick, (item as any).requiresAuth)}
                     className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-black-800 transition-colors duration-200 text-left"
                   >
                     <item.icon className="w-5 h-5 text-black-400" />
@@ -321,9 +343,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
           </motion.div>
         )}
       </AnimatePresence>
-      <UploadDialog
+      <ProtectedUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
+        onUploadSuccess={refreshPhotos}
       />
 
       <ThemesDialog

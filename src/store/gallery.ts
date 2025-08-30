@@ -75,6 +75,7 @@ interface GalleryState {
   removeSavedLayout: (id: string) => void;
   setCustomFrameStyle: (style: string[]) => void;
   setCustomStickers: (stickers: string[]) => void;
+  refreshPhotos: () => Promise<void>;
 }
 
 const placeholderPhotos: PhotoItem[] = [
@@ -83,7 +84,7 @@ const placeholderPhotos: PhotoItem[] = [
   { id: 'p3', src: 'https://picsum.photos/id/1035/900/1200', width: 900, height: 1200, caption: 'Dog' },
   { id: 'p4', src: 'https://picsum.photos/id/1041/1200/900', width: 1200, height: 900, caption: 'City' },
   { id: 'p5', src: 'https://picsum.photos/id/1050/1000/1000', width: 1000, height: 1000, caption: 'Forest' },
-  { id: 'p6', src: 'https://picsum.photos/id/1060/900/1400', width: 900, height: 1400, caption: 'Waterfall' }, 
+  { id: 'p6', src: 'https://picsum.photos/id/1060/900/1400', width: 900, height: 1400, caption: 'Waterfall' },
   { id: 'p7', src: 'https://picsum.photos/id/1074/1200/900', width: 1200, height: 900, caption: 'Coastline' },
   { id: 'p8', src: 'https://picsum.photos/id/1084/900/900', width: 900, height: 900, caption: 'Abstract' },
   { id: 'p9', src: 'https://picsum.photos/id/1080/1200/1600', width: 1200, height: 1600, caption: 'Desert' },
@@ -141,14 +142,32 @@ export const useGalleryStore = create<GalleryState>((set) => ({
   customFrameStyle: [],
   customStickers: [],
   setLayout: (layout) => set({ layout }),
-  setPhotos: (photos) => set({ photos })
-  ,setScrollDirection: (dir) => set({ scrollDirection: dir })
-  ,setCustomBackground: (bg) => set({ customBackground: bg })
-  ,setLayoutSchema: (schema) => set({ layoutSchema: schema })
-  ,addSavedLayout: (name, schema) => set((s) => ({ savedLayouts: [...s.savedLayouts, { id: `${Date.now()}`, name, schema }] }))
-  ,removeSavedLayout: (id) => set((s) => ({ savedLayouts: s.savedLayouts.filter(l => l.id !== id) }))
-  ,setCustomFrameStyle: (style) => set({ customFrameStyle: style })
-  ,setCustomStickers: (stickers) => set({ customStickers: stickers })
+  setPhotos: (photos) => set({ photos }),
+  setScrollDirection: (dir) => set({ scrollDirection: dir }),
+  setCustomBackground: (bg) => set({ customBackground: bg }),
+  setLayoutSchema: (schema) => set({ layoutSchema: schema }),
+  addSavedLayout: (name, schema) => set((s) => ({ savedLayouts: [...s.savedLayouts, { id: `${Date.now()}`, name, schema }] })),
+  removeSavedLayout: (id) => set((s) => ({ savedLayouts: s.savedLayouts.filter(l => l.id !== id) })),
+  setCustomFrameStyle: (style) => set({ customFrameStyle: style }),
+  setCustomStickers: (stickers) => set({ customStickers: stickers }),
+  refreshPhotos: async () => {
+    try {
+      const response = await fetch('http://localhost:4000/images');
+      if (response.ok) {
+        const images = await response.json();
+        const photoItems: PhotoItem[] = images.map((img: any) => ({
+          id: img.id,
+          src: img.url,
+          width: 800, // Default width, you might want to get actual dimensions
+          height: 600, // Default height, you might want to get actual dimensions
+          caption: img.title || img.description || 'Uploaded Image'
+        }));
+        set({ photos: photoItems });
+      }
+    } catch (error) {
+      console.error('Failed to refresh photos:', error);
+    }
+  }
 }));
 
 
