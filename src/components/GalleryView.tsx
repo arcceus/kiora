@@ -27,6 +27,8 @@ import { MasonryLayout } from './layouts/MasonryLayout';
 import { PolaroidLayout } from './layouts/PolaroidLayout';
 import { TimelineLayout } from './layouts/TimelineLayout';
 
+import { ConnectButton } from '@arweave-wallet-kit/react';
+
 interface GalleryViewProps {
   children?: React.ReactNode;
 }
@@ -199,13 +201,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       className={`min-h-screen ${backgroundClass} font-sans`}
       style={getBackgroundStyles()}
     >
-      {/* Authentication - Removed Clerk, implement your own auth system here */}
-      <div className="fixed top-6 left-6 z-50">
-        <button className="px-4 py-2 bg-gray-50 text-black rounded-lg hover:cursor-pointer hover:bg-gray-200 transition-all">
-          Sign In
-        </button>
-      </div>
-
+      {/* Authentication - wAuth*/}
+      <ConnectButton />
 
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">

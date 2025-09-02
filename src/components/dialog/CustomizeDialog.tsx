@@ -59,6 +59,13 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
     onOpenChange(false);
   };
 
+  // Background options placeholder - can be replaced with user-uploaded backgrounds
+  const backgroundOptions: { id: string; name: string }[] = [
+    { id: 'bg-paper', name: 'Paper' },
+    { id: 'bg-grid', name: 'Grid' },
+    { id: 'bg-none', name: 'None' },
+  ];
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'layout':
@@ -158,7 +165,7 @@ export const CustomizeDialog: React.FC<CustomizeDialogProps> = ({ open, onOpenCh
           <div className="space-y-4">
             <h3 className="font-medium">Background</h3>
             <div className="grid grid-cols-3 gap-3">
-              {backgroundOptions.map((option) => (
+              {backgroundOptions.map((option: { id: string; name: string }) => (
                 <div
                   key={option.id}
                   className={`

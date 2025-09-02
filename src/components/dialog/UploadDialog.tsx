@@ -7,7 +7,9 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { ApiService } from '../../lib/api';
+import { initializeTurboWithWalletKit } from '@/lib/turbo';
+import { useApi, useConnection } from '@arweave-wallet-kit/react';
+// import { ApiService } from '../../lib/api';
 
 interface UploadDialogProps {
   open: boolean;
@@ -59,6 +61,9 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({ open, onOpenChange, 
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const api = useApi();
+  const { connected } = useConnection()
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
@@ -67,44 +72,78 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({ open, onOpenChange, 
     setUploadProgress('Starting upload...');
 
     try {
-      let result;
+      const { turbo, authenticated } = await initializeTurboWithWalletKit(api, connected);
+      if (!authenticated) {
+        throw new Error('Wallet not connected');
+      }
 
-      if (selectedFiles.length === 1) {
-        setUploadProgress('Uploading single image...');
-        result = await ApiService.uploadSingleImage(selectedFiles[0]);
+      const authedTurbo = turbo as any;
 
-        if (result.success && result.image) {
-          setUploadProgress(`Successfully uploaded: ${result.image.title}`);
-        } else {
-          throw new Error(result.error || 'Upload failed');
+      // Build unsigned data items for all files
+      setUploadProgress('Preparing files for signing...');
+      const unsignedItems = await Promise.all(selectedFiles.map(async (file) => {
+        const data = new Uint8Array(await file.arrayBuffer());
+        const contentType = file.type || 'application/octet-stream';
+        const tags = [
+          { name: 'Content-Type', value: contentType },
+          { name: 'App-Name', value: 'the-something-gallery' },
+          { name: 'File-Name', value: file.name }
+        ];
+        return { data, tags } as any;
+      }));
+
+      // Batch sign once if supported
+      const wallet: any = (window as any).arweaveWallet;
+      if (!wallet) throw new Error('ArConnect wallet not available');
+
+      let signedItems: Uint8Array[] = [];
+      if (typeof wallet.batchSignDataItem === 'function') {
+        setUploadProgress('Awaiting wallet signature...');
+        signedItems = await wallet.batchSignDataItem(unsignedItems);
+      } else if (typeof wallet.signDataItem === 'function') {
+        // Fallback: sign sequentially (may prompt per item depending on wallet)
+        setUploadProgress('Signing files (wallet may prompt)...');
+        for (let i = 0; i < unsignedItems.length; i++) {
+          const signed = await wallet.signDataItem(unsignedItems[i]);
+          signedItems.push(signed);
         }
       } else {
-        setUploadProgress(`Uploading ${selectedFiles.length} images...`);
-        result = await ApiService.uploadMultipleImages(selectedFiles);
+        throw new Error('Wallet does not support data item signing');
+      }
 
-        if (result.success) {
-          setUploadProgress(`Uploaded ${result.summary.successful}/${result.summary.total} images successfully`);
+      // Upload each signed data item without further signing prompts
+      for (let i = 0; i < signedItems.length; i++) {
+        const file = selectedFiles[i];
+        setUploadProgress(`${file.name}: Uploading...`);
+        const arrayBuffer: ArrayBuffer = (signedItems[i] as any).buffer ?? (signedItems[i] as any);
+        const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
 
-          if (result.summary.failed > 0) {
-            const failedFiles = result.results
-              .filter(r => !r.success)
-              .map(r => r.filename)
-              .join(', ');
-            setUploadError(`Failed to upload: ${failedFiles}`);
-          }
-        } else {
-          throw new Error('Multiple upload failed');
-        }
+        const { id } = await authedTurbo.uploadSignedDataItem({
+          dataItemStreamFactory: () => blob.stream(),
+          dataItemSizeFactory: () => blob.size,
+          events: {
+            onUploadProgress: ({ totalBytes, processedBytes }: { totalBytes: number; processedBytes: number }) => {
+              const pct = totalBytes ? Math.round((processedBytes / totalBytes) * 100) : 0;
+              setUploadProgress(`${file.name}: Uploading ${pct}%`);
+            },
+            onUploadError: (error: unknown) => {
+              console.error('Upload error:', error);
+            },
+            onUploadSuccess: () => {
+              // no-op
+            },
+          },
+        });
+
+        console.log('Uploaded signed data item id:', id);
       }
 
       // Clear selected files and close dialog after successful upload
-      setTimeout(() => {
-        setSelectedFiles([]);
-        setIsUploading(false);
-        setUploadProgress('');
-        onOpenChange(false);
-        onUploadSuccess?.();
-      }, 2000);
+      setSelectedFiles([]);
+      setIsUploading(false);
+      setUploadProgress('All uploads complete');
+      onOpenChange(false);
+      onUploadSuccess?.();
 
     } catch (error) {
       console.error('Upload error:', error);

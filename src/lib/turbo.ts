@@ -1,4 +1,4 @@
-import { TurboFactory, ArconnectSigner } from '@ardrive/turbo-sdk';
+import { TurboFactory, ArconnectSigner } from '@ardrive/turbo-sdk/web';
 
 export const initializeTurboWithWalletKit = async (api: any, connected: boolean) => {
   if (!connected || !api) {
@@ -7,14 +7,20 @@ export const initializeTurboWithWalletKit = async (api: any, connected: boolean)
 
   try {
     let signer;
-    
-    // Handle different wallet strategies
-    if (api.getArweaveSigner) {
-      signer = api.getArweaveSigner();
-    } else if (api.id?.startsWith("wauth")) {
+
+    // Prefer explicit signer getters from the active strategy/api if available
+    if (typeof api.getArweaveSigner === 'function') {
+      signer = await api.getArweaveSigner();
+    } else if (typeof api.getSigner === 'function') {
+      signer = await api.getSigner();
+    } else if (api.id?.startsWith("wauth") && typeof api.getAoSigner === 'function') {
       signer = api.getAoSigner();
+    } else if (typeof window !== 'undefined' && (window as any).arweaveWallet) {
+      // Use existing ArConnect session without forcing a new connect prompt
+      signer = new ArconnectSigner((window as any).arweaveWallet);
     } else {
-      signer = new ArconnectSigner(api);
+      // No signer available
+      return { turbo: TurboFactory.unauthenticated(), authenticated: false };
     }
 
     const turbo = TurboFactory.authenticated({ signer });

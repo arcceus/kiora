@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Palette, Plus, Check, Save, Trash2 } from 'lucide-react';
+import { Palette, Check, Save, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

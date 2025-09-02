@@ -1,28 +1,39 @@
+// vite.config.ts
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  // Add this define section
+  plugins: [
+    react(),
+    tailwindcss(),
+    nodePolyfills({
+      // Let the plugin handle core globals and protocol imports
+      globals: { Buffer: true, global: true, process: true },
+      protocolImports: true,
+    }),
+  ],
+
+  // One safe global mapping for libraries that reference `global`
   define: {
     global: 'globalThis',
-    'process.env': '{}',
   },
-  
-  // Add this optimizeDeps section
+
+  // Keep optimizeDeps minimal; force-prebundle only app-specific deps if needed
   optimizeDeps: {
-    include: ['process', 'buffer', 'util'],
+    include: ['@ardrive/turbo-sdk/web'],
   },
 
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      process: 'process/browser',
-      buffer: 'buffer',
-      util: 'util',
+      // Start with no core-module aliases. Add only if a specific error persists:
+      // 'stream': 'stream-browserify',
+      // 'crypto': 'crypto-browserify',
+      // 'buffer': 'buffer',
+      // 'process': 'process/browser',
+      // 'util': 'util',
+      '@': '/src',
     },
   },
 })
