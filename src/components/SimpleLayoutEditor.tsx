@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGalleryStore } from '../store/gallery';
+import { useTheme } from './theme-provider';
 import { DraggableRect } from './DraggableRect';
 import { ThemesDialog } from './dialog/ThemesDialog';
 
@@ -55,6 +56,7 @@ export interface LayoutSchema {
 
 export const SimpleLayoutEditor = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const { setLayoutSchema, savedLayouts } = useGalleryStore();
   const [rects, setRects] = useState<PhotoRect[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -378,45 +380,77 @@ export const SimpleLayoutEditor = () => {
   // No predefined background options - users upload their own backgrounds
 
   return (
-    <div className="flex justify-center items-start flex-col min-h-screen bg-gray-50">
-      {/* Toolbar */}
-      <div className="w-full bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto p-4">
-          <div className="flex flex-col gap-4">
+    <div className={`min-h-screen flex transition-colors duration-300 ${
+      theme === 'dark'
+        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
+        : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
+    }`}>
+      {/* Scrollable Sidebar */}
+      <div className={`w-80 h-screen overflow-y-auto transition-colors duration-300 ${
+        theme === 'dark'
+          ? 'bg-slate-900/95 border-r border-slate-700/50 shadow-2xl shadow-slate-900/20'
+          : 'bg-white/95 border-r border-slate-200/50 shadow-xl shadow-slate-900/5'
+      }`}>
+        <div className="p-6">
+          <div className="space-y-8">
             {/* Photos Section */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Photos</h3>
-              <div className="flex gap-2 flex-wrap">
+            <div className="space-y-3">
+              <h3 className={`text-sm font-semibold uppercase tracking-wide transition-colors ${
+                theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+              }`}>
+                Photos
+              </h3>
+              <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={addPhoto}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                  className={`px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                    theme === 'dark'
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-600/40'
+                  }`}
                 >
                   Add Photo
                 </button>
                 <button
                   onClick={() => addPhotoWithRatio({ width: 16, height: 9 })}
-                  className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                  className={`px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                    theme === 'dark'
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-600/40'
+                  }`}
                   title="16:9 Landscape"
                 >
                   16:9
                 </button>
                 <button
                   onClick={() => addPhotoWithRatio({ width: 4, height: 3 })}
-                  className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                  className={`px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                    theme === 'dark'
+                      ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40'
+                      : 'bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-600/40'
+                  }`}
                   title="4:3 Standard"
                 >
                   4:3
                 </button>
                 <button
                   onClick={() => addPhotoWithRatio({ width: 1, height: 1 })}
-                  className="px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
+                  className={`px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                    theme === 'dark'
+                      ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40'
+                      : 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-600/40'
+                  }`}
                   title="1:1 Square"
                 >
                   1:1
                 </button>
                 <button
                   onClick={() => addPhotoWithRatio({ width: 3, height: 4 })}
-                  className="px-3 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 text-sm"
+                  className={`px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                    theme === 'dark'
+                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40'
+                      : 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/25 hover:shadow-rose-600/40'
+                  }`}
                   title="3:4 Portrait"
                 >
                   3:4
@@ -425,10 +459,18 @@ export const SimpleLayoutEditor = () => {
             </div>
 
             {/* Stickers Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-sm font-semibold text-gray-700">Stickers</h3>
-                <label className="text-xs bg-blue-500 text-white px-2 py-1 rounded cursor-pointer hover:bg-blue-600 transition-colors">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h3 className={`text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                }`}>
+                  Stickers
+                </h3>
+                <label className={`text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105 ${
+                  theme === 'dark'
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/25'
+                }`}>
                   Upload PNG
                   <input
                     type="file"
@@ -446,7 +488,11 @@ export const SimpleLayoutEditor = () => {
                   <button
                     key={`uploaded-${index}`}
                     onClick={() => addSticker(sticker)}
-                    className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors overflow-hidden"
+                    className={`w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 transform hover:scale-110 ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 shadow-lg shadow-slate-900/20 hover:shadow-slate-900/40'
+                        : 'bg-slate-100 hover:bg-slate-200 shadow-md shadow-slate-900/10 hover:shadow-slate-900/20'
+                    }`}
                     title={`Add uploaded sticker: ${sticker.name}`}
                   >
                     <img
@@ -460,10 +506,18 @@ export const SimpleLayoutEditor = () => {
             </div>
 
             {/* Frames Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-sm font-semibold text-gray-700">Photo Frames</h3>
-                <label className="text-xs bg-green-500 text-white px-2 py-1 rounded cursor-pointer hover:bg-green-600 transition-colors">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h3 className={`text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                }`}>
+                  Photo Frames
+                </h3>
+                <label className={`text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105 ${
+                  theme === 'dark'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/25'
+                }`}>
                   Upload PNG
                   <input
                     type="file"
@@ -481,7 +535,11 @@ export const SimpleLayoutEditor = () => {
                   <button
                     key={`uploaded-${index}`}
                     onClick={() => addFrame(frame)}
-                    className="w-16 h-10 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors overflow-hidden"
+                    className={`w-20 h-12 rounded-lg overflow-hidden transition-all duration-200 transform hover:scale-105 ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 shadow-lg shadow-slate-900/20 hover:shadow-slate-900/40'
+                        : 'bg-slate-100 hover:bg-slate-200 shadow-md shadow-slate-900/10 hover:shadow-slate-900/20'
+                    }`}
                     title={`Add uploaded frame: ${frame.name}`}
                   >
                     <img
@@ -495,10 +553,18 @@ export const SimpleLayoutEditor = () => {
             </div>
 
             {/* Backgrounds Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-sm font-semibold text-gray-700">Backgrounds</h3>
-                <label className="text-xs bg-purple-500 text-white px-2 py-1 rounded cursor-pointer hover:bg-purple-600 transition-colors">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h3 className={`text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                }`}>
+                  Backgrounds
+                </h3>
+                <label className={`text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-all duration-200 transform hover:scale-105 ${
+                  theme === 'dark'
+                    ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-500/25'
+                    : 'bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-500/25'
+                }`}>
                   Upload PNG
                   <input
                     type="file"
@@ -511,7 +577,11 @@ export const SimpleLayoutEditor = () => {
                 {hasBackground && (
                   <button
                     onClick={clearBackground}
-                    className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
+                    className={`text-xs font-medium px-3 py-1.5 rounded-md transition-all duration-200 transform hover:scale-105 ${
+                      theme === 'dark'
+                        ? 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-500/25'
+                        : 'bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-500/25'
+                    }`}
                     title="Clear background"
                   >
                     Clear BG
@@ -525,7 +595,11 @@ export const SimpleLayoutEditor = () => {
                   <button
                     key={`uploaded-bg-${index}`}
                     onClick={() => addBackground(background)}
-                    className="w-16 h-10 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors overflow-hidden border border-gray-300"
+                    className={`w-20 h-12 rounded-lg overflow-hidden transition-all duration-200 transform hover:scale-105 border-2 ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 shadow-lg shadow-slate-900/20 hover:shadow-slate-900/40 border-slate-600'
+                        : 'bg-slate-100 hover:bg-slate-200 shadow-md shadow-slate-900/10 hover:shadow-slate-900/20 border-slate-300'
+                    }`}
                     title={`Add uploaded background: ${background.name}`}
                   >
                     <img
@@ -540,18 +614,30 @@ export const SimpleLayoutEditor = () => {
 
             {/* Uploaded Assets Info */}
             {(uploadedStickers.length > 0 || uploadedFrames.length > 0 || uploadedBackgrounds.length > 0) && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-700">Your Assets</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className={`text-sm font-semibold uppercase tracking-wide transition-colors ${
+                    theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                  }`}>
+                    Your Assets
+                  </h3>
                   <button
                     onClick={clearUploadedAssets}
-                    className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
+                    className={`text-xs font-medium px-3 py-1.5 rounded-md transition-all duration-200 transform hover:scale-105 ${
+                      theme === 'dark'
+                        ? 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-500/25'
+                        : 'bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-500/25'
+                    }`}
                     title="Clear all uploaded assets"
                   >
                     Clear All
                   </button>
                 </div>
-                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                <div className={`text-xs font-medium p-3 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-slate-800/50 text-slate-300 border border-slate-700/50'
+                    : 'bg-slate-50 text-slate-600 border border-slate-200'
+                }`}>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <span>Stickers: {uploadedStickers.length}</span>
                     <span>Frames: {uploadedFrames.length}</span>
@@ -563,68 +649,110 @@ export const SimpleLayoutEditor = () => {
 
             {/* Layer Controls */}
             {selectedId && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Layer Controls</h3>
-                <div className="flex flex-col gap-3">
-                  <div className="flex gap-2">
+              <div className="space-y-3">
+                <h3 className={`text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                }`}>
+                  Layer Controls
+                </h3>
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => bringToFront(selectedId)}
-                      className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                        theme === 'dark'
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-600/40'
+                      }`}
                     >
                       Bring to Front
                     </button>
                     <button
                       onClick={() => sendToBack(selectedId)}
-                      className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                        theme === 'dark'
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-600/40'
+                      }`}
                     >
                       Send to Back
                     </button>
                     <button
                       onClick={() => deleteElement(selectedId)}
-                      className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                        theme === 'dark'
+                          ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40'
+                          : 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25 hover:shadow-red-600/40'
+                      }`}
                     >
                       Delete
                     </button>
                   </div>
 
                   {/* Rotation Control */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 min-w-12">Rotate:</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="360"
-                      step="1"
-                      value={rects.find(r => r.id === selectedId)?.rotation || 0}
-                      onChange={(e) => {
-                        const rotation = parseInt(e.target.value);
-                        updateRect(selectedId, { rotation });
-                      }}
-                      className="flex-1"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max="360"
-                      step="1"
-                      value={rects.find(r => r.id === selectedId)?.rotation || 0}
-                      onChange={(e) => {
-                        const rotation = Math.max(0, Math.min(360, parseInt(e.target.value) || 0));
-                        updateRect(selectedId, { rotation });
-                      }}
-                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
-                    />
-                    <span className="text-sm text-gray-600">°</span>
+                  <div className={`p-3 rounded-lg space-y-3 ${
+                    theme === 'dark'
+                      ? 'bg-slate-800/50 border border-slate-700/50'
+                      : 'bg-slate-50 border border-slate-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <label className={`text-sm font-medium min-w-12 transition-colors ${
+                        theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+                      }`}>
+                        Rotate:
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="360"
+                        step="1"
+                        value={rects.find(r => r.id === selectedId)?.rotation || 0}
+                        onChange={(e) => {
+                          const rotation = parseInt(e.target.value);
+                          updateRect(selectedId, { rotation });
+                        }}
+                        className={`flex-1 ${
+                          theme === 'dark'
+                            ? 'accent-indigo-500'
+                            : 'accent-indigo-600'
+                        }`}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="360"
+                        step="1"
+                        value={rects.find(r => r.id === selectedId)?.rotation || 0}
+                        onChange={(e) => {
+                          const rotation = Math.max(0, Math.min(360, parseInt(e.target.value) || 0));
+                          updateRect(selectedId, { rotation });
+                        }}
+                        className={`w-16 px-2 py-1 text-sm rounded border transition-colors ${
+                          theme === 'dark'
+                            ? 'bg-slate-700 border-slate-600 text-slate-200 focus:border-indigo-500'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'
+                        }`}
+                      />
+                      <span className={`text-sm transition-colors ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+                      }`}>
+                        °
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Export */}
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <button
                 onClick={() => setThemesDialogOpen(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className={`px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 transform hover:scale-105 ${
+                  theme === 'dark'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-600/40'
+                }`}
               >
                 Save & Export Layout
               </button>
@@ -634,9 +762,13 @@ export const SimpleLayoutEditor = () => {
       </div>
 
       {/* Canvas */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8 flex items-center justify-center">
         <div
-          className="relative border-2 border-gray-400 bg-gray-100 shadow-lg mx-auto"
+          className={`relative rounded-lg border-2 transition-all duration-300 mx-auto ${
+            theme === 'dark'
+              ? 'border-slate-600 bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl shadow-slate-900/50'
+              : 'border-slate-300 bg-gradient-to-br from-slate-50 to-white shadow-2xl shadow-slate-900/20'
+          }`}
           style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
           onClick={(e) => {
             // Only deselect if clicking on the canvas itself, not on child elements

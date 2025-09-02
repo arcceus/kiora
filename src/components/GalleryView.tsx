@@ -201,10 +201,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   };
 
   return (
-    <div
-      className={`min-h-screen ${backgroundClass} font-sans`}
-      style={getBackgroundStyles()}
-    >
+    <>
       {/* Authentication */}
       <div className="fixed top-6 left-6 z-50">
         <SignedOut>
@@ -218,6 +215,11 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
           <UserButton />
         </SignedIn>
       </div>
+    <div
+      className={`min-h-screen ${backgroundClass} font-sans`}
+      style={getBackgroundStyles()}
+    >
+      
 
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
@@ -381,5 +383,6 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
         onOpenChange={setShareOpen}
       />
     </div>
+    </>
   );
 };
