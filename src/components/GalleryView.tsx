@@ -26,7 +26,7 @@ import type { LayoutSchema, PhotoRect } from './SimpleLayoutEditor';
 import { MasonryLayout } from './layouts/MasonryLayout';
 import { PolaroidLayout } from './layouts/PolaroidLayout';
 import { TimelineLayout } from './layouts/TimelineLayout';
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
+
 interface GalleryViewProps {
   children?: React.ReactNode;
 }
@@ -106,8 +106,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
     {
       icon: Upload,
       label: 'Upload',
-      onClick: () => setUploadOpen(true),
-      requiresAuth: true
+      onClick: () => setUploadOpen(true)
     },
     {
       icon: Palette,
@@ -146,13 +145,8 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
     },
   ];
 
-  const handleMenuItemClick = (onClick: () => void, requiresAuth?: boolean) => {
-    if (requiresAuth) {
-      // For authenticated actions, we'll let the component handle the auth check
-      onClick();
-    } else {
-      onClick();
-    }
+  const handleMenuItemClick = (onClick: () => void) => {
+    onClick();
     setIsMenuOpen(false);
   };
 
@@ -201,25 +195,17 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
   };
 
   return (
-    <>
-      {/* Authentication */}
-      <div className="fixed top-6 left-6 z-50">
-        <SignedOut>
-          <SignInButton mode="modal">
-            <button className="px-4 py-2 bg-gray-50 text-black rounded-lg hover:cursor-pointer hover:bg-gray-200 transition-all">
-              Sign In
-            </button>
-          </SignInButton>
-        </SignedOut>
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
-      </div>
     <div
       className={`min-h-screen ${backgroundClass} font-sans`}
       style={getBackgroundStyles()}
     >
-      
+      {/* Authentication - Removed Clerk, implement your own auth system here */}
+      <div className="fixed top-6 left-6 z-50">
+        <button className="px-4 py-2 bg-gray-50 text-black rounded-lg hover:cursor-pointer hover:bg-gray-200 transition-all">
+          Sign In
+        </button>
+      </div>
+
 
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
@@ -276,7 +262,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => handleMenuItemClick(item.onClick, (item as any).requiresAuth)}
+                    onClick={() => handleMenuItemClick(item.onClick)}
                     className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-black-800 transition-colors duration-200 text-left"
                   >
                     <item.icon className="w-5 h-5 text-black-400" />
@@ -383,6 +369,5 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
         onOpenChange={setShareOpen}
       />
     </div>
-    </>
   );
 };
