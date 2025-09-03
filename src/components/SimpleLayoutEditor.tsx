@@ -61,6 +61,9 @@ export const SimpleLayoutEditor = () => {
   const { setLayoutSchema, savedLayouts } = useGalleryStore();
   const [rects, setRects] = useState<PhotoRect[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [defaultStickers, setDefaultStickers] = useState<StickerData[]>([]);
+  const [defaultFrames, setDefaultFrames] = useState<FrameData[]>([]);
+  const [defaultBackgrounds, setDefaultBackgrounds] = useState<BackgroundData[]>([]);
   const [uploadedStickers, setUploadedStickers] = useState<StickerData[]>([]);
   const [uploadedFrames, setUploadedFrames] = useState<FrameData[]>([]);
   const [uploadedBackgrounds, setUploadedBackgrounds] = useState<BackgroundData[]>([]);
@@ -99,6 +102,41 @@ export const SimpleLayoutEditor = () => {
 
   // Load uploaded assets from localStorage and IndexedDB on component mount
   useEffect(() => {
+    // Load default assets from project layouts folders using Vite's glob import
+    try {
+      const layoutsA = import.meta.glob('/src/layouts/**/*.{png,jpg,jpeg,svg}', { eager: true, import: 'default' }) as Record<string, string>;
+      const layoutsB = import.meta.glob('/src/assets/layouts/**/*.{png,jpg,jpeg,svg}', { eager: true, import: 'default' }) as Record<string, string>;
+      const allLayouts: Record<string, string> = { ...layoutsA, ...layoutsB };
+
+      const discoveredBackgrounds: BackgroundData[] = [];
+      const discoveredFrames: FrameData[] = [];
+      const discoveredStickers: StickerData[] = [];
+
+      Object.entries(allLayouts).forEach(([path, url]) => {
+        const parts = path.split('/');
+        const fileName = parts[parts.length - 1] || '';
+        const base = fileName.replace(/\.[^.]+$/, '').toLowerCase();
+
+        // Heuristics: background.* or bg.* => background
+        // frame*, *frame* => frame
+        // rest => sticker
+        if (base === 'background' || base === 'bg' || base.includes('background')) {
+          discoveredBackgrounds.push({ src: url, name: fileName, opacity: 1, isUploaded: false });
+        } else if (base.startsWith('frame') || base.includes('frame')) {
+          discoveredFrames.push({ style: 'simple', src: url, name: fileName, isUploaded: false });
+        } else {
+          discoveredStickers.push({ src: url, name: fileName, isUploaded: false });
+        }
+      });
+
+      setDefaultBackgrounds(discoveredBackgrounds);
+      setDefaultFrames(discoveredFrames);
+      setDefaultStickers(discoveredStickers);
+    } catch (e) {
+      // If glob fails (e.g., folder not present), just keep defaults empty
+      console.warn('No default layout assets discovered under src/layouts or src/assets/layouts');
+    }
+
     const init = async () => {
       try {
         const savedStickers = JSON.parse(localStorage.getItem('uploadedStickers') || '[]');
@@ -491,7 +529,25 @@ export const SimpleLayoutEditor = () => {
                 </label>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* No predefined stickers - users upload their own */}
+                {/* Default stickers from layout packs */}
+                {defaultStickers.map((sticker, index) => (
+                  <button
+                    key={`default-${index}`}
+                    onClick={() => addSticker(sticker)}
+                    className={`w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 transform hover:scale-110 ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 shadow-lg shadow-slate-900/20 hover:shadow-slate-900/40'
+                        : 'bg-slate-100 hover:bg-slate-200 shadow-md shadow-slate-900/10 hover:shadow-slate-900/20'
+                    }`}
+                    title={`Add sticker: ${sticker.name}`}
+                  >
+                    <img
+                      src={sticker.src}
+                      alt={sticker.name || 'Sticker'}
+                      className="w-full h-full object-contain"
+                    />
+                  </button>
+                ))}
                 {/* Uploaded stickers */}
                 {uploadedStickers.map((sticker, index) => (
                   <button
@@ -538,7 +594,25 @@ export const SimpleLayoutEditor = () => {
                 </label>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* No predefined frames - users upload their own PNG frames */}
+                {/* Default frames from layout packs */}
+                {defaultFrames.map((frame, index) => (
+                  <button
+                    key={`default-${index}`}
+                    onClick={() => addFrame(frame)}
+                    className={`w-20 h-12 rounded-lg overflow-hidden transition-all duration-200 transform hover:scale-105 ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 shadow-lg shadow-slate-900/20 hover:shadow-slate-900/40'
+                        : 'bg-slate-100 hover:bg-slate-200 shadow-md shadow-slate-900/10 hover:shadow-slate-900/20'
+                    }`}
+                    title={`Add frame: ${frame.name}`}
+                  >
+                    <img
+                      src={frame.src}
+                      alt={frame.name || 'Frame'}
+                      className="w-full h-full object-contain"
+                    />
+                  </button>
+                ))}
                 {/* Uploaded frames */}
                 {uploadedFrames.map((frame, index) => (
                   <button
@@ -598,7 +672,25 @@ export const SimpleLayoutEditor = () => {
                 )}
               </div>
               <div className="flex gap-2 flex-wrap">
-                {/* No predefined backgrounds - users upload their own */}
+                {/* Default backgrounds from layout packs */}
+                {defaultBackgrounds.map((background, index) => (
+                  <button
+                    key={`default-bg-${index}`}
+                    onClick={() => addBackground(background)}
+                    className={`w-20 h-12 rounded-lg overflow-hidden transition-all duration-200 transform hover:scale-105 border-2 ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 shadow-lg shadow-slate-900/20 hover:shadow-slate-900/40 border-slate-600'
+                        : 'bg-slate-100 hover:bg-slate-200 shadow-md shadow-slate-900/10 hover:shadow-slate-900/20 border-slate-300'
+                    }`}
+                    title={`Add background: ${background.name}`}
+                  >
+                    <img
+                      src={background.src}
+                      alt={background.name || 'Background'}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
                 {/* Uploaded backgrounds */}
                 {uploadedBackgrounds.map((background, index) => (
                   <button

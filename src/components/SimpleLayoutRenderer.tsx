@@ -24,6 +24,37 @@ interface SimpleLayoutRendererProps {
     const { customFrameStyle, scrollDirection } = useGalleryStore();
     const frameClass = customFrameStyle.includes('rounded') ? 'rounded-3xl' : 'rounded-none';
 
+    // Discover default layout assets (backgrounds, frames, stickers) bundled with the app
+    // These are loaded from src/layouts/** and src/assets/layouts/** similar to the editor
+    const defaultLayoutsA = (import.meta as any).glob('/src/layouts/**/*.{png,jpg,jpeg,svg}', { eager: true, import: 'default' }) as Record<string, string>;
+    const defaultLayoutsB = (import.meta as any).glob('/src/assets/layouts/**/*.{png,jpg,jpeg,svg}', { eager: true, import: 'default' }) as Record<string, string>;
+    const defaultAssets: Record<string, string> = { ...defaultLayoutsA, ...defaultLayoutsB };
+
+    const filenameOf = (path: string) => {
+      const parts = path.split('/');
+      return parts[parts.length - 1] || path;
+    };
+    const baseName = (name: string) => name.replace(/\.[^.]+$/, '').toLowerCase();
+
+    // Build maps of defaults by name for quick lookup
+    const defaultStickersByName: Map<string, string> = new Map();
+    const defaultFramesByName: Map<string, string> = new Map();
+    const defaultBackgroundsByName: Map<string, string> = new Map();
+    for (const [path, url] of Object.entries(defaultAssets)) {
+      const file = filenameOf(path);
+      const base = baseName(file);
+      if (base === 'background' || base === 'bg' || base.includes('background')) {
+        defaultBackgroundsByName.set(file, url);
+        defaultBackgroundsByName.set(base, url);
+      } else if (base.startsWith('frame') || base.includes('frame')) {
+        defaultFramesByName.set(file, url);
+        defaultFramesByName.set(base, url);
+      } else {
+        defaultStickersByName.set(file, url);
+        defaultStickersByName.set(base, url);
+      }
+    }
+
     // Load uploaded assets metadata from localStorage (names), and lazily fetch blobs from IndexedDB on demand
     const [uploadedAssets, setUploadedAssets] = useState<{ stickers: any[]; frames: any[]; backgrounds: any[] }>({ stickers: [], frames: [], backgrounds: [] });
     useEffect(() => {
@@ -80,6 +111,11 @@ interface SimpleLayoutRendererProps {
         })();
         return undefined;
       }
+      // Try resolve from default assets by name
+      if (name) {
+        const key = baseName(name);
+        return defaultStickersByName.get(name) || defaultStickersByName.get(key);
+      }
       return undefined;
     };
 
@@ -101,6 +137,11 @@ interface SimpleLayoutRendererProps {
         })();
         return undefined;
       }
+      // Try resolve from default assets by name
+      if (name) {
+        const key = baseName(name);
+        return defaultFramesByName.get(name) || defaultFramesByName.get(key);
+      }
       return undefined;
     };
 
@@ -121,6 +162,11 @@ interface SimpleLayoutRendererProps {
           }
         })();
         return undefined;
+      }
+      // Try resolve from default assets by name
+      if (name) {
+        const key = baseName(name);
+        return defaultBackgroundsByName.get(name) || defaultBackgroundsByName.get(key);
       }
       return undefined;
     };
@@ -180,31 +226,34 @@ interface SimpleLayoutRendererProps {
         }
 
         case 'background':
-          return (
-            <div className="relative w-full h-full overflow-hidden">
-              {(() => { const src = resolveBackgroundSrc(elementData); return src && src.trim() !== ''; })() ? (
-                <img
-                  src={resolveBackgroundSrc(elementData) as string}
-                  alt={elementData?.backgroundData?.name || 'Background'}
-                  className="w-screen h-screen object-cover absolute inset-0 select-none"
-                  style={{
-                    opacity: elementData?.backgroundData?.opacity || 1,
-                    userSelect: 'none',
-                    pointerEvents: 'none'
-                  }}
-                  draggable={false}
-                />
-              ) : (
-                <div
-                  className="w-screen h-screen absolute inset-0"
-                  style={{
-                    backgroundColor: '#F3F4F6', // Default gray background
-                    opacity: elementData?.backgroundData?.opacity || 1
-                  }}
-                />
-              )}
-            </div>
-          );
+          {
+            const bgSrc = resolveBackgroundSrc(elementData);
+            return (
+              <div className="relative w-full h-full overflow-hidden">
+                {bgSrc && bgSrc.trim() !== '' ? (
+                  <img
+                    src={bgSrc}
+                    alt={elementData?.backgroundData?.name || 'Background'}
+                    className="w-screen h-screen object-cover absolute inset-0 select-none"
+                    style={{
+                      opacity: elementData?.backgroundData?.opacity || 1,
+                      userSelect: 'none',
+                      pointerEvents: 'none'
+                    }}
+                    draggable={false}
+                  />
+                ) : (
+                  <div
+                    className="w-screen h-screen absolute inset-0"
+                    style={{
+                      backgroundColor: '#F3F4F6', // Default gray background
+                      opacity: elementData?.backgroundData?.opacity || 1
+                    }}
+                  />
+                )}
+              </div>
+            );
+          }
 
         default: // photo
           if (photoIndex === undefined || !photos[photoIndex]) return null;

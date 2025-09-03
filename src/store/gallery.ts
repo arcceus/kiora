@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type GalleryLayout = 'grid' | 'masonry' | 'polaroid' | 'timeline';
 export type ScrollDirection = 'vertical' | 'horizontal';
@@ -69,6 +70,8 @@ interface GalleryState {
   customStickers: string[];
   setLayout: (layout: GalleryLayout) => void;
   setPhotos: (photos: PhotoItem[]) => void;
+  addPhoto: (photo: PhotoItem) => void;
+  addPhotos: (photos: PhotoItem[]) => void;
   setScrollDirection: (dir: ScrollDirection) => void;
   setCustomBackground: (bg: string[]) => void;
   setLayoutSchema: (schema: LayoutTileSchema | null) => void;
@@ -154,7 +157,7 @@ const saveSavedLayouts = (layouts: SavedLayout[]) => {
   }
 };
 
-export const useGalleryStore = create<GalleryState>((set) => ({
+export const useGalleryStore = create<GalleryState>()(persist((set) => ({
   layout: 'grid',
   photos: placeholderPhotos,
   scrollDirection: 'vertical',
@@ -165,6 +168,8 @@ export const useGalleryStore = create<GalleryState>((set) => ({
   customStickers: [],
   setLayout: (layout) => set({ layout }),
   setPhotos: (photos) => set({ photos }),
+  addPhoto: (photo) => set((s) => ({ photos: [...s.photos, photo] })),
+  addPhotos: (photos) => set((s) => ({ photos: [...s.photos, ...photos] })),
   setScrollDirection: (dir) => set({ scrollDirection: dir }),
   setCustomBackground: (bg) => set({ customBackground: bg }),
   setLayoutSchema: (schema) => set({ layoutSchema: schema }),
@@ -265,6 +270,12 @@ export const useGalleryStore = create<GalleryState>((set) => ({
       console.error('Failed to refresh photos:', error);
     }
   }
+}), {
+  name: 'gallery-store',
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({
+    photos: state.photos,
+  }),
 }));
 
 

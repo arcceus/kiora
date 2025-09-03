@@ -10,6 +10,7 @@ import { Button } from '../ui/button';
 import { initializeTurboWithWalletKit } from '@/lib/turbo';
 import { useApi, useConnection } from '@arweave-wallet-kit/react';
 // import { ApiService } from '../../lib/api';
+import { useGalleryStore } from '@/store/gallery';
 
 interface UploadDialogProps {
   open: boolean;
@@ -63,6 +64,24 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({ open, onOpenChange, 
 
   const api = useApi();
   const { connected } = useConnection()
+  const addPhoto = useGalleryStore(s => s.addPhoto);
+
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const dims = { width: img.naturalWidth || 800, height: img.naturalHeight || 600 };
+        URL.revokeObjectURL(url);
+        resolve(dims);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: 800, height: 600 });
+      };
+      img.src = url;
+    });
+  };
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
@@ -136,6 +155,16 @@ export const UploadDialog: React.FC<UploadDialogProps> = ({ open, onOpenChange, 
         });
 
         console.log('Uploaded signed data item id:', id);
+
+        // Add to gallery store
+        const { width, height } = await getImageDimensions(file);
+        addPhoto({
+          id,
+          src: `https://arweave.net/${id}`,
+          width,
+          height,
+          caption: file.name
+        });
       }
 
       // Clear selected files and close dialog after successful upload
