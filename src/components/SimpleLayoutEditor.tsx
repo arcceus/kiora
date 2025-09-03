@@ -5,6 +5,7 @@ import { useGalleryStore } from '../store/gallery';
 import { useTheme } from './theme-provider';
 import { DraggableRect } from './DraggableRect';
 import { ThemesDialog } from './dialog/ThemesDialog';
+import { putAsset, getAllAssets, clearAllStores } from '../lib/idb';
 
 export type ElementType = 'photo' | 'sticker' | 'frame' | 'background';
 
@@ -96,128 +97,134 @@ export const SimpleLayoutEditor = () => {
     };
   };
 
-  // Load uploaded assets from localStorage on component mount
+  // Load uploaded assets from localStorage and IndexedDB on component mount
   useEffect(() => {
-    const savedStickers = localStorage.getItem('uploadedStickers');
-    const savedFrames = localStorage.getItem('uploadedFrames');
-    const savedBackgrounds = localStorage.getItem('uploadedBackgrounds');
-
-    if (savedStickers) {
+    const init = async () => {
       try {
-        setUploadedStickers(JSON.parse(savedStickers));
-      } catch (e) {
-        console.error('Failed to load uploaded stickers:', e);
-      }
-    }
+        const savedStickers = JSON.parse(localStorage.getItem('uploadedStickers') || '[]');
+        const savedFrames = JSON.parse(localStorage.getItem('uploadedFrames') || '[]');
+        const savedBackgrounds = JSON.parse(localStorage.getItem('uploadedBackgrounds') || '[]');
 
-    if (savedFrames) {
-      try {
-        setUploadedFrames(JSON.parse(savedFrames));
-      } catch (e) {
-        console.error('Failed to load uploaded frames:', e);
-      }
-    }
+        const [idbStickers, idbFrames, idbBackgrounds] = await Promise.all([
+          getAllAssets('stickers'),
+          getAllAssets('frames'),
+          getAllAssets('backgrounds')
+        ]);
 
-    if (savedBackgrounds) {
-      try {
-        setUploadedBackgrounds(JSON.parse(savedBackgrounds));
+        const stickersByName = new Map<string, string>();
+        idbStickers.forEach(({ name, blob }) => stickersByName.set(name, URL.createObjectURL(blob)));
+        const framesByName = new Map<string, string>();
+        idbFrames.forEach(({ name, blob }) => framesByName.set(name, URL.createObjectURL(blob)));
+        const bgsByName = new Map<string, string>();
+        idbBackgrounds.forEach(({ name, blob }) => bgsByName.set(name, URL.createObjectURL(blob)));
+
+        const mergedStickers: StickerData[] = (savedStickers as StickerData[]).map(s => ({
+          ...s,
+          src: s.name && stickersByName.has(s.name) ? (stickersByName.get(s.name) as string) : s.src
+        }));
+        const mergedFrames: FrameData[] = (savedFrames as FrameData[]).map(f => ({
+          ...f,
+          src: f.name && framesByName.has(f.name) ? (framesByName.get(f.name) as string) : f.src
+        }));
+        const mergedBackgrounds: BackgroundData[] = (savedBackgrounds as BackgroundData[]).map(b => ({
+          ...b,
+          src: b.name && bgsByName.has(b.name) ? (bgsByName.get(b.name) as string) : b.src
+        }));
+
+        setUploadedStickers(mergedStickers);
+        setUploadedFrames(mergedFrames);
+        setUploadedBackgrounds(mergedBackgrounds);
       } catch (e) {
-        console.error('Failed to load uploaded backgrounds:', e);
+        console.error('Failed to initialize uploaded assets:', e);
       }
-    }
+    };
+    void init();
   }, []);
 
   const validatePNGFile = (file: File): boolean => {
     return file.type === 'image/png' && file.size <= 5 * 1024 * 1024; // 5MB limit
   };
 
-  const handleStickerUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStickerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    for (const file of Array.from(files)) {
       if (!validatePNGFile(file)) {
         alert(`${file.name} is not a valid PNG file or exceeds 5MB limit.`);
-        return;
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const newSticker: StickerData = {
-          src: result,
-          name: file.name.replace('.png', ''),
-          isUploaded: true
-        };
-
+      const name = file.name.replace('.png', '');
+      try {
+        await putAsset('stickers', name, file);
+        const objectUrl = URL.createObjectURL(file);
+        const newSticker: StickerData = { src: objectUrl, name, isUploaded: true };
         const updatedStickers = [...uploadedStickers, newSticker];
         setUploadedStickers(updatedStickers);
-        localStorage.setItem('uploadedStickers', JSON.stringify(updatedStickers));
-      };
-      reader.readAsDataURL(file);
-    });
+        // Persist only light metadata in localStorage to avoid quota
+        const meta = updatedStickers.map(s => ({ name: s.name, isUploaded: true }));
+        localStorage.setItem('uploadedStickers', JSON.stringify(meta));
+      } catch (e) {
+        console.error('Failed to store sticker in IndexedDB:', e);
+      }
+    }
 
     // Reset input
     event.target.value = '';
   };
 
-  const handleFrameUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFrameUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    for (const file of Array.from(files)) {
       if (!validatePNGFile(file)) {
         alert(`${file.name} is not a valid PNG file or exceeds 5MB limit.`);
-        return;
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const newFrame: FrameData = {
-          style: 'simple',
-          src: result,
-          name: file.name.replace('.png', ''),
-          isUploaded: true
-        };
-
+      const name = file.name.replace('.png', '');
+      try {
+        await putAsset('frames', name, file);
+        const objectUrl = URL.createObjectURL(file);
+        const newFrame: FrameData = { style: 'simple', src: objectUrl, name, isUploaded: true };
         const updatedFrames = [...uploadedFrames, newFrame];
         setUploadedFrames(updatedFrames);
-        localStorage.setItem('uploadedFrames', JSON.stringify(updatedFrames));
-      };
-      reader.readAsDataURL(file);
-    });
+        const meta = updatedFrames.map(f => ({ style: f.style, name: f.name, isUploaded: true }));
+        localStorage.setItem('uploadedFrames', JSON.stringify(meta));
+      } catch (e) {
+        console.error('Failed to store frame in IndexedDB:', e);
+      }
+    }
 
     // Reset input
     event.target.value = '';
   };
 
-  const handleBackgroundUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackgroundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    for (const file of Array.from(files)) {
       if (!validatePNGFile(file)) {
         alert(`${file.name} is not a valid PNG file or exceeds 5MB limit.`);
-        return;
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const newBackground: BackgroundData = {
-          src: result,
-          name: file.name.replace('.png', ''),
-          opacity: 1,
-          isUploaded: true
-        };
-
+      const name = file.name.replace('.png', '');
+      try {
+        await putAsset('backgrounds', name, file);
+        const objectUrl = URL.createObjectURL(file);
+        const newBackground: BackgroundData = { src: objectUrl, name, opacity: 1, isUploaded: true };
         const updatedBackgrounds = [...uploadedBackgrounds, newBackground];
         setUploadedBackgrounds(updatedBackgrounds);
-        localStorage.setItem('uploadedBackgrounds', JSON.stringify(updatedBackgrounds));
-      };
-      reader.readAsDataURL(file);
-    });
+        const meta = updatedBackgrounds.map(b => ({ name: b.name, opacity: b.opacity, isUploaded: true }));
+        localStorage.setItem('uploadedBackgrounds', JSON.stringify(meta));
+      } catch (e) {
+        console.error('Failed to store background in IndexedDB:', e);
+      }
+    }
 
     // Reset input
     event.target.value = '';
@@ -352,6 +359,8 @@ export const SimpleLayoutEditor = () => {
     localStorage.removeItem('uploadedStickers');
     localStorage.removeItem('uploadedFrames');
     localStorage.removeItem('uploadedBackgrounds');
+    // Also clear IndexedDB stores
+    void clearAllStores();
   };
 
   const clearBackground = () => {

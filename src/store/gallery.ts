@@ -169,7 +169,65 @@ export const useGalleryStore = create<GalleryState>((set) => ({
   setCustomBackground: (bg) => set({ customBackground: bg }),
   setLayoutSchema: (schema) => set({ layoutSchema: schema }),
   addSavedLayout: (name, schema) => {
-    const newLayout: SavedLayout = { id: `${Date.now()}`, name, schema };
+    // Sanitize schema before saving to avoid exceeding localStorage quota with large data URLs
+    const sanitizeLayoutSchema = (input: LayoutTileSchema): LayoutTileSchema => {
+      const cloned: LayoutTileSchema = {
+        id: input.id,
+        tileSize: { width: input.tileSize.width, height: input.tileSize.height },
+        version: input.version,
+        nodes: input.nodes.map((node) => {
+          const sanitizedNode: LayoutNodeSchema = {
+            id: node.id,
+            frame: { x: node.frame.x, y: node.frame.y, width: node.frame.width, height: node.frame.height },
+            zIndex: node.zIndex,
+            type: node.type,
+            caption: node.caption,
+            aspectRatio: node.aspectRatio,
+            rotation: node.rotation,
+          };
+
+          // Do NOT persist photo src on nodes; renderer uses photos[]
+          // Remove or omit large data URLs for uploaded assets; keep name to rehydrate
+          if (node.stickerData) {
+            sanitizedNode.stickerData = {
+              emoji: node.stickerData.emoji,
+              // drop src to avoid storing base64
+              src: undefined,
+              color: node.stickerData.color,
+              name: node.stickerData.name,
+              isUploaded: node.stickerData.isUploaded,
+            };
+          }
+
+          if (node.frameData) {
+            sanitizedNode.frameData = {
+              style: node.frameData.style,
+              color: node.frameData.color,
+              thickness: node.frameData.thickness,
+              // drop src to avoid storing base64
+              src: undefined,
+              name: node.frameData.name,
+              isUploaded: node.frameData.isUploaded,
+            };
+          }
+
+          if (node.backgroundData) {
+            sanitizedNode.backgroundData = {
+              // keep empty string to satisfy typing, rehydrate later by name
+              src: '',
+              name: node.backgroundData.name,
+              opacity: node.backgroundData.opacity,
+              isUploaded: node.backgroundData.isUploaded,
+            };
+          }
+
+          return sanitizedNode;
+        })
+      };
+      return cloned;
+    };
+
+    const newLayout: SavedLayout = { id: `${Date.now()}`, name, schema: sanitizeLayoutSchema(schema) };
     set((s) => {
       const updatedLayouts = [...s.savedLayouts, newLayout];
       saveSavedLayouts(updatedLayouts);

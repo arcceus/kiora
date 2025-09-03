@@ -1,5 +1,6 @@
 // src/components/SimpleLayoutRenderer.tsx
 import { useRef, useState, useEffect } from 'react';
+import { getAsset } from '../lib/idb';
 import { useGalleryStore } from '../store/gallery';
 import type { PhotoRect, LayoutSchema } from './SimpleLayoutEditor';
 import type { LayoutTileSchema } from '../store/gallery';
@@ -22,6 +23,19 @@ interface SimpleLayoutRendererProps {
   }) => {
     const { customFrameStyle, scrollDirection } = useGalleryStore();
     const frameClass = customFrameStyle.includes('rounded') ? 'rounded-3xl' : 'rounded-none';
+
+    // Load uploaded assets metadata from localStorage (names), and lazily fetch blobs from IndexedDB on demand
+    const [uploadedAssets, setUploadedAssets] = useState<{ stickers: any[]; frames: any[]; backgrounds: any[] }>({ stickers: [], frames: [], backgrounds: [] });
+    useEffect(() => {
+      try {
+        const stickers = JSON.parse(localStorage.getItem('uploadedStickers') || '[]');
+        const frames = JSON.parse(localStorage.getItem('uploadedFrames') || '[]');
+        const backgrounds = JSON.parse(localStorage.getItem('uploadedBackgrounds') || '[]');
+        setUploadedAssets({ stickers, frames, backgrounds });
+      } catch {
+        setUploadedAssets({ stickers: [], frames: [], backgrounds: [] });
+      }
+    }, []);
 
     // Determine node list and photo slots per tile (exclude non-photo elements like background/frame/sticker)
     const nodes = isTileSchema(schema) ? schema.nodes : (schema as any).rects;
@@ -46,6 +60,71 @@ interface SimpleLayoutRendererProps {
       return -1;
     });
 
+    // Resolve asset src if it was sanitized before saving (rehydrate by name)
+    const resolveStickerSrc = (node: any): string | undefined => {
+      const name = node?.stickerData?.name;
+      if (node?.stickerData?.src) return node.stickerData.src;
+      if (node?.stickerData?.isUploaded && name) {
+        const match = uploadedAssets.stickers.find((s: any) => s?.name === name);
+        if ((match as any)?.src) return (match as any).src;
+        // Trigger async fetch from IDB and update state with object URL
+        (async () => {
+          const blob = await getAsset('stickers', name);
+          if (blob) {
+            const objectUrl = URL.createObjectURL(blob);
+            setUploadedAssets(prev => ({
+              ...prev,
+              stickers: prev.stickers.map((s: any) => s?.name === name ? { ...s, src: objectUrl } : s)
+            }));
+          }
+        })();
+        return undefined;
+      }
+      return undefined;
+    };
+
+    const resolveFrameSrc = (node: any): string | undefined => {
+      const name = node?.frameData?.name;
+      if (node?.frameData?.src) return node.frameData.src;
+      if (node?.frameData?.isUploaded && name) {
+        const match = uploadedAssets.frames.find((f: any) => f?.name === name);
+        if ((match as any)?.src) return (match as any).src;
+        (async () => {
+          const blob = await getAsset('frames', name);
+          if (blob) {
+            const objectUrl = URL.createObjectURL(blob);
+            setUploadedAssets(prev => ({
+              ...prev,
+              frames: prev.frames.map((f: any) => f?.name === name ? { ...f, src: objectUrl } : f)
+            }));
+          }
+        })();
+        return undefined;
+      }
+      return undefined;
+    };
+
+    const resolveBackgroundSrc = (node: any): string | undefined => {
+      const name = node?.backgroundData?.name;
+      if (node?.backgroundData?.src) return node.backgroundData.src;
+      if (node?.backgroundData?.isUploaded && name) {
+        const match = uploadedAssets.backgrounds.find((b: any) => b?.name === name);
+        if ((match as any)?.src) return (match as any).src;
+        (async () => {
+          const blob = await getAsset('backgrounds', name);
+          if (blob) {
+            const objectUrl = URL.createObjectURL(blob);
+            setUploadedAssets(prev => ({
+              ...prev,
+              backgrounds: prev.backgrounds.map((b: any) => b?.name === name ? { ...b, src: objectUrl } : b)
+            }));
+          }
+        })();
+        return undefined;
+      }
+      return undefined;
+    };
+
     // Helper function to render different element types
     const renderElement = (node: any, photoIndex?: number) => {
       const elementType = isTileSchema(schema) ? node.type : 'photo';
@@ -53,13 +132,15 @@ interface SimpleLayoutRendererProps {
 
       switch (elementType) {
         case 'sticker':
-          if (elementData?.stickerData?.src) {
+          {
+            const src = resolveStickerSrc(elementData);
+            if (src) {
             // Uploaded PNG sticker
             return (
               <div className="flex items-center justify-center w-full h-full">
                 <img
-                  src={elementData.stickerData.src}
-                  alt={elementData.stickerData.name || 'Uploaded sticker'}
+                  src={src}
+                  alt={elementData?.stickerData?.name || 'Uploaded sticker'}
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
@@ -72,15 +153,18 @@ interface SimpleLayoutRendererProps {
               </div>
             );
           }
+        }
 
         case 'frame':
-          if (elementData?.frameData?.src) {
+          {
+            const src = resolveFrameSrc(elementData);
+            if (src) {
             // Uploaded PNG frame
             return (
               <div className="flex items-center justify-center w-full h-full">
                 <img
-                  src={elementData.frameData.src}
-                  alt={elementData.frameData.name || 'Uploaded frame'}
+                  src={src}
+                  alt={elementData?.frameData?.name || 'Uploaded frame'}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -93,17 +177,18 @@ interface SimpleLayoutRendererProps {
               </div>
             );
           }
+        }
 
         case 'background':
           return (
             <div className="relative w-full h-full overflow-hidden">
-              {elementData?.backgroundData?.src && elementData.backgroundData.src.trim() !== '' ? (
+              {(() => { const src = resolveBackgroundSrc(elementData); return src && src.trim() !== ''; })() ? (
                 <img
-                  src={elementData.backgroundData.src}
-                  alt={elementData.backgroundData.name || 'Background'}
+                  src={resolveBackgroundSrc(elementData) as string}
+                  alt={elementData?.backgroundData?.name || 'Background'}
                   className="w-screen h-screen object-cover absolute inset-0 select-none"
                   style={{
-                    opacity: elementData.backgroundData.opacity || 1,
+                    opacity: elementData?.backgroundData?.opacity || 1,
                     userSelect: 'none',
                     pointerEvents: 'none'
                   }}

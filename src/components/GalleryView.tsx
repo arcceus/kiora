@@ -202,7 +202,10 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ children }) => {
       style={getBackgroundStyles()}
     >
       {/* Authentication - wAuth*/}
-      <ConnectButton />
+      <div className='fixed top-4 left-3 z-50'>
+        <ConnectButton />
+      </div>
+      
 
       {/* Top-Right Menu Button */}
       <div className="fixed top-6 right-6 z-50">
