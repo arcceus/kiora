@@ -9,6 +9,38 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { useGalleryStore } from '../../store/gallery';
+import type { SavedLayout, LayoutTileSchema } from '../../store/gallery';
+
+// Discover default JSON themes from src/themes/*.json at module scope
+const defaultThemeModules = (import.meta as any).glob('/src/themes/*.json', { eager: true, import: 'default' }) as Record<string, any>;
+const DEFAULT_LAYOUTS: SavedLayout[] = Object.entries(defaultThemeModules).flatMap(([path, data]) => {
+  const parts = path.split('/');
+  const file = parts[parts.length - 1] || 'theme.json';
+  const base = file.replace(/\.[^.]+$/, '');
+
+  const toSavedLayout = (entry: any, index: number): SavedLayout => {
+    let schema: LayoutTileSchema | null = null;
+    if (entry && typeof entry === 'object') {
+      if (entry.schema && entry.schema.nodes && entry.schema.tileSize) {
+        schema = entry.schema as LayoutTileSchema;
+      } else if (entry.nodes && entry.tileSize) {
+        schema = entry as LayoutTileSchema;
+      }
+    }
+    const name = (entry && entry.name) ? String(entry.name) : base;
+    const id = (entry && entry.id) ? String(entry.id) : `${base}-${index}`;
+    return {
+      id: `default:${id}`,
+      name,
+      schema: (schema || { id: name, version: 2, tileSize: { width: 1000, height: 650 }, nodes: [] }) as LayoutTileSchema,
+    } as SavedLayout;
+  };
+
+  if (Array.isArray(data)) {
+    return data.map((entry, index) => toSavedLayout(entry, index));
+  }
+  return [toSavedLayout(data, 0)];
+});
 
 interface Theme {
   id: string;
@@ -46,14 +78,28 @@ export const ThemesDialog: React.FC<ThemesDialogProps> = ({
     description: `Custom layout with ${layout.schema.nodes.length} elements`
   }));
 
+  // Use precomputed default layouts
+  const defaultLayouts: SavedLayout[] = DEFAULT_LAYOUTS;
+
+  const defaultThemes: Theme[] = defaultLayouts.map(l => ({
+    id: l.id,
+    name: l.name,
+    preview: 'layout',
+    description: `Default theme with ${l.schema.nodes.length} elements`
+  }));
+
   const handleThemeSelect = (themeId: string) => {
     setSelectedTheme(themeId);
   };
 
   const handleApplyTheme = () => {
-    const selectedLayout = savedLayouts.find(l => l.id === selectedTheme);
-    if (selectedLayout) {
-      setLayoutSchema(selectedLayout.schema);
+    const selectedSaved = savedLayouts.find(l => l.id === selectedTheme);
+    const selectedDefault = defaultLayouts.find(l => l.id === selectedTheme);
+    if (selectedSaved) {
+      setLayoutSchema(selectedSaved.schema);
+      onThemeChange?.(selectedTheme);
+    } else if (selectedDefault) {
+      setLayoutSchema(selectedDefault.schema);
       onThemeChange?.(selectedTheme);
     }
     onOpenChange(false);
@@ -86,6 +132,46 @@ export const ThemesDialog: React.FC<ThemesDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Default Themes */}
+          {defaultThemes.length > 0 && (
+            <div>
+              <h3 className="font-medium mb-3">Default Themes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {defaultThemes.map((theme) => (
+                  <motion.div
+                    key={theme.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`
+                      relative group p-4 border-2 rounded-lg cursor-pointer transition-all
+                      ${selectedTheme === theme.id
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                      }
+                    `}
+                    onClick={() => handleThemeSelect(theme.id)}
+                  >
+                    {/* Selection Indicator */}
+                    {selectedTheme === theme.id && (
+                      <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+
+                    {/* Theme Preview */}
+                    <div className="text-6xl text-center mb-3">
+                      {getPreviewIcon(theme.preview)}
+                    </div>
+
+                    {/* Theme Info */}
+                    <h4 className="font-medium text-center mb-1">{theme.name}</h4>
+                    <p className="text-sm text-gray-500 text-center">{theme.description}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Save Current Layout */}
           <div className="border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 bg-blue-50 dark:bg-blue-950">
             <div className="flex items-center gap-3 mb-3">
@@ -211,7 +297,12 @@ export const ThemesDialog: React.FC<ThemesDialogProps> = ({
             </Button>
             <Button
               onClick={handleApplyTheme}
-              disabled={!selectedTheme || !savedLayouts.find(l => l.id === selectedTheme)}
+              disabled={
+                !selectedTheme || (
+                  !savedLayouts.find(l => l.id === selectedTheme) &&
+                  !defaultLayouts.find(l => l.id === selectedTheme)
+                )
+              }
             >
               Apply Theme
             </Button>
