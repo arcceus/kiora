@@ -1,9 +1,16 @@
 // src/components/SimpleLayoutRenderer.tsx
 import { useRef, useState, useEffect } from 'react';
+import { useGSAP } from '@gsap/react';
+import { gsap } from 'gsap';
+import { ScrollSmoother } from 'gsap/ScrollSmoother';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getAsset } from '../lib/idb';
 import { useGalleryStore } from '../store/gallery';
 import type { PhotoRect, LayoutSchema } from './SimpleLayoutEditor';
 import type { LayoutTileSchema } from '../store/gallery';
+
+// Register GSAP plugins
+gsap.registerPlugin(ScrollSmoother, ScrollTrigger);
 
 interface SimpleLayoutRendererProps {
     schema: LayoutSchema | LayoutTileSchema;
@@ -23,6 +30,18 @@ interface SimpleLayoutRendererProps {
   }) => {
     const { customFrameStyle, scrollDirection } = useGalleryStore();
     const frameClass = customFrameStyle.includes('rounded') ? 'rounded-3xl' : 'rounded-none';
+
+    // Early return if no photos to prevent blank page
+    if (!photos || photos.length === 0) {
+      return (
+        <div className="flex items-center justify-center w-full h-full text-white">
+          <div className="text-center">
+            <p className="text-xl mb-4">No photos to display</p>
+            <p className="text-sm text-gray-400">Upload some photos to get started</p>
+          </div>
+        </div>
+      );
+    }
 
     // Discover default layout assets (backgrounds, frames, stickers) bundled with the app
     // These are loaded from src/layouts/** and src/assets/layouts/** similar to the editor
@@ -183,7 +202,7 @@ interface SimpleLayoutRendererProps {
             if (src) {
             // Uploaded PNG sticker
             return (
-              <div className="flex items-center justify-center w-full h-full">
+              <div className="flex items-center justify-center w-full h-full layout-sticker">
                 <img
                   src={src}
                   alt={elementData?.stickerData?.name || 'Uploaded sticker'}
@@ -194,7 +213,7 @@ interface SimpleLayoutRendererProps {
           } else {
             // Emoji sticker
             return (
-              <div className="flex items-center justify-center w-full h-full text-4xl">
+              <div className="flex items-center justify-center w-full h-full text-4xl layout-sticker">
                 {elementData?.stickerData?.emoji || '🎨'}
               </div>
             );
@@ -263,12 +282,14 @@ interface SimpleLayoutRendererProps {
             <button
               className={`w-full h-full overflow-hidden ${frameClass} border border-gray-800 bg-gray-900 hover:border-gray-600 transition-colors`}
               onClick={() => onOpenLightbox(photoIndex)}
+              data-gsap-ignore="true"
             >
               <img
                 src={photo.src}
                 alt={photo.caption || 'Photo'}
                 className="w-full h-full object-cover"
                 loading="lazy"
+                data-gsap-ignore="true"
               />
             </button>
           );
@@ -278,6 +299,30 @@ interface SimpleLayoutRendererProps {
     // Calculate how to tile the pattern
     const containerRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
+    const smootherRef = useRef<any>(null);
+
+    // Cleanup on component unmount
+    useEffect(() => {
+      return () => {
+        // Final cleanup when component unmounts
+        try {
+          if (smootherRef.current) {
+            smootherRef.current.kill();
+            smootherRef.current = null;
+          }
+
+          // Kill all remaining tweens but keep ScrollTriggers for smoother experience
+          gsap.utils.toArray('.layout-sticker').forEach((sticker: any) => {
+            gsap.killTweensOf(sticker);
+          });
+          gsap.utils.toArray('.asset-container').forEach((container: any) => {
+            gsap.killTweensOf(container);
+          });
+        } catch (error) {
+          console.warn('Component unmount cleanup error:', error);
+        }
+      };
+    }, []);
     
     useEffect(() => {
       const calculateScale = () => {
@@ -304,7 +349,125 @@ interface SimpleLayoutRendererProps {
       window.addEventListener('resize', calculateScale);
       return () => window.removeEventListener('resize', calculateScale);
     }, [schema, scrollDirection, isTileSchema]);
-  
+
+    // Set up smooth scrolling with GSAP ScrollSmoother
+    useGSAP(() => {
+      if (!containerRef.current || !containerRef.current.parentElement) return;
+
+      // Clean up existing smoother if it exists (keep ScrollTriggers for smoother experience)
+      try {
+        // Only kill existing smoother, let ScrollTriggers refresh naturally
+        if (smootherRef.current) {
+          smootherRef.current.kill();
+          smootherRef.current = null;
+        }
+      } catch (error) {
+        console.warn('Cleanup error:', error);
+      }
+
+      try {
+        // Create ScrollSmoother instance for smooth scrolling
+        const smoother = ScrollSmoother.create({
+          wrapper: containerRef.current.parentElement,
+          content: containerRef.current,
+          smooth: 1.5, // Very smooth scrolling for premium feel
+          effects: true, // Enable effects for assets
+          normalizeScroll: true, // Normalize scroll behavior
+          ignoreMobileResize: true, // Prevent issues on mobile
+        });
+
+        // Set up ScrollTrigger animations for assets only
+        setupAssetAnimations(containerRef.current);
+
+        smootherRef.current = smoother;
+
+        return () => {
+          // Only cleanup ScrollSmoother, keep ScrollTriggers for smoother transitions
+          if (smootherRef.current) {
+            try {
+              smootherRef.current.kill();
+            } catch (e) {
+              console.warn('ScrollSmoother cleanup error:', e);
+            }
+            smootherRef.current = null;
+          }
+        };
+      } catch (error) {
+        console.warn('ScrollSmoother initialization failed:', error);
+        return () => {}; // Return empty cleanup function
+      }
+    }, [scrollDirection]); // Only depend on scrollDirection changes
+
+    // Function to set up ScrollTrigger animations for assets only
+    const setupAssetAnimations = (container: HTMLElement) => {
+      if (!container) return;
+
+      // Animate stickers with controlled single animation per element
+      gsap.utils.toArray('.layout-sticker').forEach((sticker: any, index: number) => {
+        // Cap the index to prevent animation strength from growing too much
+        const cappedIndex = Math.min(index, 3); // Max variation at index 3
+
+        // Create a timeline for each sticker to control all animations
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: sticker,
+            start: 'top 85%', // Trigger earlier for more noticeable effect
+            end: 'bottom 15%',
+            scrub: 0.8, // Slightly more responsive scrubbing
+            toggleActions: 'play none none reverse'
+          }
+        });
+
+        // Set initial state with capped variation
+        gsap.set(sticker, {
+          opacity: 0.9,
+          y: 3 + (cappedIndex * 1), // Capped initial offset
+          scale: 0.99,
+          rotation: 0
+        });
+
+        // More noticeable animation with capped effects
+        tl.to(sticker, {
+          opacity: 1,
+          y: -8 - (cappedIndex * 1.5), // Capped upward movement (max -12.5px)
+          scale: 1.05, // More noticeable scale
+          rotation: 1 - (cappedIndex * 0.2), // Capped rotation (max 0.4°)
+          duration: 1.5, // Longer duration for smoother effect
+          ease: 'power2.out' // Smoother easing
+        });
+      });
+
+
+      // Add more noticeable scroll effect for asset containers
+      gsap.utils.toArray('.asset-container').forEach((assetContainer: any, index: number) => {
+        // Cap the index for containers too
+        const cappedIndex = Math.min(index, 4); // Max variation at index 4
+
+        gsap.to(assetContainer, {
+          y: -12 - (cappedIndex * 2), // Capped parallax movement (max -20px)
+          ease: 'power1.inOut',
+          scrollTrigger: {
+            trigger: assetContainer,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1.2 // Smoother scrubbing for better effect
+          }
+        });
+      });
+
+      // Refresh ScrollTrigger on window resize
+      const handleResize = () => {
+        ScrollTrigger.refresh();
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      // Return cleanup function
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    };
+
     if (scrollDirection === 'horizontal') {
       return (
         <div className="relative w-full h-full">
@@ -327,7 +490,7 @@ interface SimpleLayoutRendererProps {
               {Array.from({ length: Math.ceil(photos.length / Math.max(photoSlotsPerTile, 1)) }).map((_, tileIndex) => (
                 <div
                   key={tileIndex}
-                  className="relative flex-shrink-0"
+                  className="relative flex-shrink-0 asset-container"
                   style={{
                     width: (isTileSchema(schema) ? schema.tileSize.width : schema.canvas.width) * scale,
                     height: (isTileSchema(schema) ? schema.tileSize.height : schema.canvas.height) * scale
@@ -386,7 +549,7 @@ interface SimpleLayoutRendererProps {
             {Array.from({ length: Math.ceil(photos.length / Math.max(photoSlotsPerTile, 1)) }).map((_, tileIndex) => (
               <div
                 key={tileIndex}
-                className="relative flex-shrink-0"
+                className="relative flex-shrink-0 asset-container"
                 style={{
                   width: (isTileSchema(schema) ? schema.tileSize.width : schema.canvas.width) * scale,
                   height: (isTileSchema(schema) ? schema.tileSize.height : schema.canvas.height) * scale
