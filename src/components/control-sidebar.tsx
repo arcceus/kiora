@@ -10,7 +10,6 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 import { useTheme } from './theme-provider'
-import { cn } from "@/lib/utils"
 
 export type ElementType = 'photo' | 'sticker' | 'frame' | 'background'
 

@@ -1,5 +1,4 @@
 import * as React from "react"
-import { useState, useEffect } from 'react'
 import { Image, Palette, Frame, Sticker, Upload } from "lucide-react"
 
 import {
@@ -11,7 +10,6 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar"
-import { putAsset, getAllAssets } from '../lib/idb'
 import { useTheme } from './theme-provider'
 import { cn } from "@/lib/utils"
 

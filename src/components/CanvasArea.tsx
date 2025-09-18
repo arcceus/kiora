@@ -43,7 +43,6 @@ export function CanvasArea({
   const { theme } = useTheme()
 
   // Calculate responsive canvas dimensions
-  const aspectRatio = canvasWidth / canvasHeight // 1000/650 ≈ 1.538
 
   // Use a ref to measure the container
   const containerRef = React.useRef<HTMLDivElement>(null)

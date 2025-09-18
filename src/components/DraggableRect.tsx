@@ -319,11 +319,8 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
             transform: `rotate(${(rect.rotation || 0)}deg)`,
             transformOrigin: 'center center',
           }}
-          onMouseDown={(e) => {
-            // Scale mouse coordinates for background selection
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / scaleFactor;
-            const y = (e.clientY - rect.top) / scaleFactor;
+          onMouseDown={() => {
+            // Background selection
             onSelect();
           }}
         >
