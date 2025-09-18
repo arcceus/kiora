@@ -9,6 +9,7 @@ export interface DraggableRectProps {
     onUpdate: (updates: Partial<PhotoRect>) => void;
     canvasWidth: number;
     canvasHeight: number;
+    scaleFactor?: number;
   }
 
 
@@ -19,7 +20,8 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
   onSelect,
   onUpdate,
   canvasWidth,
-  canvasHeight
+  canvasHeight,
+  scaleFactor = 1
 }) => {
     const wrapperRef = React.useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -54,8 +56,9 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
     const handleMouseMove = (e: MouseEvent) => {
       if (!hasStartedDrag) return;
 
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+      // Scale mouse movement by the inverse of the scale factor
+      const deltaX = (e.clientX - dragStart.x) / scaleFactor;
+      const deltaY = (e.clientY - dragStart.y) / scaleFactor;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
       // Only start dragging if mouse has moved more than 5 pixels
@@ -65,8 +68,12 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
 
       if (!isDragging) return;
 
-      const newX = Math.max(0, Math.min(canvasWidth - rect.width, dragStart.rectX + deltaX));
-      const newY = Math.max(0, Math.min(canvasHeight - rect.height, dragStart.rectY + deltaY));
+      // Use original canvas dimensions for boundary calculations
+      const originalCanvasWidth = canvasWidth / scaleFactor;
+      const originalCanvasHeight = canvasHeight / scaleFactor;
+
+      const newX = Math.max(0, Math.min(originalCanvasWidth - rect.width, dragStart.rectX + deltaX));
+      const newY = Math.max(0, Math.min(originalCanvasHeight - rect.height, dragStart.rectY + deltaY));
 
       onUpdate({ x: newX, y: newY });
     };
@@ -87,11 +94,16 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
     const handleResizeMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
 
-      const deltaX = e.clientX - resizeStart.x;
-      const deltaY = e.clientY - resizeStart.y;
+      // Scale mouse movement by the inverse of the scale factor
+      const deltaX = (e.clientX - resizeStart.x) / scaleFactor;
+      const deltaY = (e.clientY - resizeStart.y) / scaleFactor;
 
-      let newWidth = Math.max(50, Math.min(canvasWidth - rect.x, resizeStart.width + deltaX));
-      let newHeight = Math.max(50, Math.min(canvasHeight - rect.y, resizeStart.height + deltaY));
+      // Use original canvas dimensions for boundary calculations
+      const originalCanvasWidth = canvasWidth / scaleFactor;
+      const originalCanvasHeight = canvasHeight / scaleFactor;
+
+      let newWidth = Math.max(50, Math.min(originalCanvasWidth - rect.x, resizeStart.width + deltaX));
+      let newHeight = Math.max(50, Math.min(originalCanvasHeight - rect.y, resizeStart.height + deltaY));
 
       // If the rectangle has an aspect ratio, maintain it
       if (rect.aspectRatio) {
@@ -175,7 +187,7 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
           document.removeEventListener('mouseup', handleMouseUp);
         };
       }
-    }, [hasStartedDrag, isDragging, dragStart, rect.width, rect.height, canvasWidth, canvasHeight, onUpdate]);
+    }, [hasStartedDrag, isDragging, dragStart, rect.width, rect.height, canvasWidth, canvasHeight, scaleFactor, onUpdate]);
 
     React.useEffect(() => {
       if (isResizing) {
@@ -187,7 +199,7 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
           document.removeEventListener('mouseup', handleMouseUp);
         };
       }
-    }, [isResizing, resizeStart, rect.x, rect.y, canvasWidth, canvasHeight, onUpdate]);
+    }, [isResizing, resizeStart, rect.x, rect.y, canvasWidth, canvasHeight, scaleFactor, onUpdate]);
 
     React.useEffect(() => {
       if (isRotating) {
@@ -307,7 +319,13 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
             transform: `rotate(${(rect.rotation || 0)}deg)`,
             transformOrigin: 'center center',
           }}
-          onMouseDown={onSelect}
+          onMouseDown={(e) => {
+            // Scale mouse coordinates for background selection
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / scaleFactor;
+            const y = (e.clientY - rect.top) / scaleFactor;
+            onSelect();
+          }}
         >
           {renderElementContent()}
 
@@ -337,10 +355,10 @@ export const DraggableRect: React.FC<DraggableRectProps> = ({
             : `border-2 ${selected ? 'border-blue-500 bg-blue-100' : 'border-gray-500 bg-gray-300'}`
         }`}
         style={{
-          left: rect.x,
-          top: rect.y,
-          width: rect.width,
-          height: rect.height,
+          left: rect.x * scaleFactor,
+          top: rect.y * scaleFactor,
+          width: rect.width * scaleFactor,
+          height: rect.height * scaleFactor,
           zIndex: rect.zIndex || 0,
           userSelect: 'none',
           transformOrigin: 'center center',
